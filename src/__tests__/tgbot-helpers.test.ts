@@ -1,33 +1,24 @@
 import TelegramBot = require("node-telegram-bot-api");
 import { LocalStorage } from "node-localstorage";
-import { properties, initTGHelpers, sendTo, toggleAdmin, toggleUserIdInList, variableIsTrue, variableNumber, variable, sendToAdmins, toggleGod, sendToGods } from "../index";
+import { properties, initBot, sendTo, toggleAdmin, toggleUserIdInList, variableIsTrue, variableNumber, variable, sendToAdmins, toggleGod, sendToGods } from "../index";
 
-test('start', () => {
-  expect(properties()).toEqual({
-    telegramBotInstance: undefined,
-    localStorageInstance: undefined,
-    globalVariables: ["godsSendErrors"],
-    userVariables: [],
-  });
+
+initBot({
+  telegramBotToken: "token",
+  localStoragePath: "./src/__tests__/variables/",
+  globalVariables: ["testVariable"],
+  userVariables: ["var1", "var2"],
 });
 
-const bot = new TelegramBot("token");
-const ls = new LocalStorage("./src/__tests__/variables/");
+const props = properties();
+const bot = props.telegramBot;
+const ls = props.localStorage;
 
-test('init', () => {
-  initTGHelpers({
-    telegramBotInstance: bot,
-    localStorageInstance: ls,
-    globalVariables: ["testVariable"],
-    userVariables: ["var1", "var2"],
-  });
-
-  expect(properties()).toEqual({
-    telegramBotInstance: bot,
-    localStorageInstance: ls,
-    globalVariables: ["godsSendErrors", "testVariable"],
-    userVariables: ["var1", "var2"],
-  });
+test('properties', () => {
+  expect(bot).toEqual(expect.any(TelegramBot));
+  expect(ls).toEqual(expect.any(LocalStorage));
+  expect(props.globalVariables).toEqual(["godsSendErrors", "testVariable"]);
+  expect(props.userVariables).toEqual(["var1", "var2"]);
 });
 
 jest.mock("node-telegram-bot-api");

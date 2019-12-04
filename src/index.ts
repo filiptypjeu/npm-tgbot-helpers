@@ -1,11 +1,18 @@
 import TelegramBot, { ParseMode } from "node-telegram-bot-api";
 import { LocalStorage } from "node-localstorage";
 
-export interface ITGHelperProperties {
-  telegramBotInstance: TelegramBot,
-  localStorageInstance: LocalStorage,
+export interface IBotHelperInit {
+  telegramBotToken: string,
+  localStoragePath: string,
   globalVariables?: string[],
   userVariables?: string[],
+}
+
+export interface IBotHelperProps {
+  telegramBot: TelegramBot,
+  localStorage: LocalStorage,
+  globalVariables: string[],
+  userVariables: string[],
 }
 
 let bot: TelegramBot;
@@ -31,9 +38,9 @@ const stringListFromVariable = (variableName: string): string[] => {
   return (s ? s.trim().split("\n") : []);
 }
 
-export const initTGHelpers = (initWith: ITGHelperProperties) => {
-  bot = initWith.telegramBotInstance;
-  ls = initWith.localStorageInstance;
+export const initBot = (initWith: IBotHelperInit): TelegramBot => {
+  bot = new TelegramBot(initWith.telegramBotToken);
+  ls = new LocalStorage(initWith.localStoragePath);
 
   // admins = numberListFromVariable(adminListVariable);
   // gods = numberListFromVariable(godListVariable);
@@ -43,20 +50,38 @@ export const initTGHelpers = (initWith: ITGHelperProperties) => {
   }
   gVars = gVars.sort();
   uVars = (initWith.userVariables ? initWith.userVariables : []).sort();
+
+  return bot;
 }
 
-export const properties = (): ITGHelperProperties => {
-  const p: ITGHelperProperties = {
-    telegramBotInstance: bot,
-    localStorageInstance: ls,
+export const properties = (): IBotHelperProps => {
+  const p: IBotHelperProps = {
+    telegramBot: bot,
+    localStorage: ls,
     globalVariables: gVars,
     userVariables: uVars,
   }
   return p;
 }
 
+export const globalVariables = (): string[] => {
+  return gVars;
+}
+
+export const isInList = (userId: number, variableName: string) => {
+  return stringListFromVariable(variableName).includes(userId.toString());
+}
+
+export const isGod = (userId: number) => {
+  return isInList(userId, godListVariable);
+}
+
+export const isAdmin = (userId: number) => {
+  return isInList(userId, adminListVariable);
+}
+
 export const hasRights = (userId: number) => {
-  return stringListFromVariable(adminListVariable).includes(userId.toString()) ? true : stringListFromVariable(godListVariable).includes(userId.toString());
+  return isAdmin(userId) || isGod(userId);
 }
 
 export const sendTo = async (chatId: number, text: string, parseMode?: ParseMode) => {
@@ -106,7 +131,9 @@ export const variableIsTrue = (variableName: string): boolean => {
   return ls.getItem(variableName) === "1";
 }
 
-export const userIdsToInfo = async (userIds: number[], extraInfo?: string[]) => {
+export const userIdsToInfo = async (variableName: string, extraInfo?: string[]) => {
+  const userIds = stringListFromVariable(variableName);
+
   if (userIds.length > 0) {
     return await Promise.all(userIds.map(async (n, i) => {
       return await bot.getChat(n)
