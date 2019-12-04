@@ -11,29 +11,32 @@ export interface ITGHelperProperties {
 let bot: TelegramBot;
 let ls: LocalStorage;
 
-let gods: number[] = [];
-let admins: number[] = [];
+// let gods: number[] = [];
+// let admins: number[] = [];
 
 let uVars: string[] = [];
 let gVars: string[] = [
   "godsSendErrors",
 ];
 
-const adminList = "TGHELPERS#ADMINUSERIDS";
-const godList = "TGHELPERS#GODUSERIDS";
-
+const adminListVariable = "TGHELPERS#ADMINUSERIDS";
+const godListVariable = "TGHELPERS#GODUSERIDS";
 
 const numberListFromVariable = (variableName: string): number[] => {
-  let s = varGet(variableName);
-  return (s ? s.trim().split("\n") : []).map(s => Number(s)).filter(n => n !== NaN);
+  return stringListFromVariable(variableName).map(s => Number(s)).filter(n => n !== NaN);
+}
+
+const stringListFromVariable = (variableName: string): string[] => {
+  const s = variable(variableName);
+  return (s ? s.trim().split("\n") : []);
 }
 
 export const initTGHelpers = (initWith: ITGHelperProperties) => {
   bot = initWith.telegramBotInstance;
   ls = initWith.localStorageInstance;
 
-  admins = numberListFromVariable(adminList);
-  gods = numberListFromVariable(godList);
+  // admins = numberListFromVariable(adminListVariable);
+  // gods = numberListFromVariable(godListVariable);
 
   if (initWith.globalVariables) {
     initWith.globalVariables.forEach(s => gVars.push(s));
@@ -53,7 +56,7 @@ export const properties = (): ITGHelperProperties => {
 }
 
 export const hasRights = (userId: number) => {
-  return gods.includes(userId) ? true : admins.includes(userId);
+  return stringListFromVariable(adminListVariable).includes(userId.toString()) ? true : stringListFromVariable(godListVariable).includes(userId.toString());
 }
 
 export const sendTo = async (chatId: number, text: string, parseMode?: ParseMode) => {
@@ -68,36 +71,39 @@ export const sendTo = async (chatId: number, text: string, parseMode?: ParseMode
     });
 }
 
+
 export const sendToGods = async (text: string, parseMode?: ParseMode) => {
-  gods.forEach(id => sendTo(id, text, parseMode));
+  return Promise.all(numberListFromVariable(godListVariable).map(id => sendTo(id, text, parseMode)));
 }
 
 export const sendToAdmins = async (text: string, parseMode?: ParseMode) => {
-  admins.forEach(id => sendTo(id, text, parseMode));
+  return Promise.all(numberListFromVariable(adminListVariable).map(id => sendTo(id, text, parseMode)));
 }
 
 export const sendError = async (e: any) => {
   console.error(e);
-  if (varIsTrue("godsSendErrors")) {
+  if (variableIsTrue("godsSendErrors")) {
     sendToGods(e.toString() ? e.toString().slice(0, 3000) : "Error...");
   }
 }
 
-export const varIsTrue = (variable: string): boolean => {
-  return ls.getItem(variable) === "1";
+
+
+export const variable = (variableName: string, value?: string | number) => {
+  if (value === undefined) {
+    const s = ls.getItem(variableName);
+    return s ? s : "";
+  }
+  return ls.setItem(variableName, value.toString());
 }
 
-export const varGet = (variable: string): string | null => {
-  return ls.getItem(variable);
-}
-
-export const varGetNumber = (variable: string, defaultValue: number = 0): number => {
-  const s = varGet(variable);
+export const variableNumber = (variableName: string, defaultValue: number = 0): number => {
+  const s = ls.getItem(variableName);
   return Number(s) ? Number(s) : defaultValue;
 }
 
-export const varSet = (variable: string, value: string | number) => {
-  return ls.setItem(variable, value.toString());
+export const variableIsTrue = (variableName: string): boolean => {
+  return ls.getItem(variableName) === "1";
 }
 
 export const userIdsToInfo = async (userIds: number[], extraInfo?: string[]) => {
@@ -113,19 +119,23 @@ export const userIdsToInfo = async (userIds: number[], extraInfo?: string[]) => 
   } 
 }
 
-export const toggleUserIdInList = (userId: number, variable: string) => {
-  const userIds = numberListFromVariable(variable);
+export const toggleUserIdInList = (userId: number, variableName: string) => {
+  const userIds = stringListFromVariable(variableName);
 
-  if (userIds.includes(userId)) {
-    varSet(variable, userIds.filter(c => c !== userId).join("/n"));
+  if (userIds.includes(userId.toString())) {
+    variable(variableName, userIds.filter(id => id !== userId.toString()).join("\n"));
     return false;
   }
 
-  userIds.push(userId);
-  varSet(variable, userIds.join("/n"));
+  userIds.push(userId.toString());
+  variable(variableName, userIds.join("\n"));
   return true
 }
 
 export const toggleAdmin = (userId: number) => {
-  return toggleUserIdInList(userId, adminList);
+  return toggleUserIdInList(userId, adminListVariable);
+}
+
+export const toggleGod = (userId: number) => {
+  return toggleUserIdInList(userId, godListVariable);
 }
