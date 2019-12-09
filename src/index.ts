@@ -1,18 +1,18 @@
-import { LocalStorage } from "node-localstorage";
-import TelegramBot, { ParseMode } from "node-telegram-bot-api";
+import { LocalStorage } from 'node-localstorage';
+import TelegramBot, { ParseMode } from 'node-telegram-bot-api';
 
 export interface IBotHelperInit {
-  telegramBotToken: string,
-  localStoragePath: string,
-  globalVariables?: string[],
-  userVariables?: string[],
+  telegramBotToken: string;
+  localStoragePath: string;
+  globalVariables?: string[];
+  userVariables?: string[];
 }
 
 export interface IBotHelperProps {
-  telegramBot: TelegramBot,
-  localStorage: LocalStorage,
-  globalVariables: string[],
-  userVariables: string[],
+  telegramBot: TelegramBot;
+  localStorage: LocalStorage;
+  globalVariables: string[];
+  userVariables: string[];
 }
 
 let bot: TelegramBot;
@@ -22,21 +22,14 @@ let ls: LocalStorage;
 // let admins: number[] = [];
 
 let uVars: string[] = [];
-let gVars: string[] = [
-  "godsSendErrors",
-];
+let gVars: string[] = ['adminsSendErrors'];
 
-const adminListVariable = "TGHELPERS#ADMINUSERIDS";
-const godListVariable = "TGHELPERS#GODUSERIDS";
-
-const numberListFromVariable = (variableName: string): number[] => {
-  return stringListFromVariable(variableName).map(s => Number(s)).filter(n => !isNaN(n));
-}
+const adminListVariable = 'TGHELPERS#ADMINUSERIDS';
 
 const stringListFromVariable = (variableName: string): string[] => {
   const s = variable(variableName);
-  return (s ? s.trim().split("\n") : []);
-}
+  return s ? s.trim().split('\n') : [];
+};
 
 export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   bot = new TelegramBot(initWith.telegramBotToken);
@@ -52,7 +45,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   uVars = (initWith.userVariables ? initWith.userVariables : []).sort();
 
   return bot;
-}
+};
 
 export const properties = (): IBotHelperProps => {
   const p: IBotHelperProps = {
@@ -60,109 +53,98 @@ export const properties = (): IBotHelperProps => {
     localStorage: ls,
     telegramBot: bot,
     userVariables: uVars,
-  }
+  };
   return p;
-}
+};
 
 export const globalVariables = (): string[] => {
   return gVars;
-}
+};
 
-export const isInList = (userId: number, variableName: string) => {
+export const isInList = (userId: number | string, variableName: string) => {
   return stringListFromVariable(variableName).includes(userId.toString());
-}
-
-export const isGod = (userId: number) => {
-  return isInList(userId, godListVariable);
-}
+};
 
 export const isAdmin = (userId: number) => {
   return isInList(userId, adminListVariable);
-}
+};
 
-export const hasRights = (userId: number) => {
-  return isAdmin(userId) || isGod(userId);
-}
+export const sendTo = async (userId: number | string, text: string, parseMode?: ParseMode) => {
+  bot.sendMessage(userId, text, { parse_mode: parseMode }).catch(e => {
+    if (e.code === 'ETELEGRAM') {
+      sendError(
+        `Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`,
+      );
+    } else {
+      console.log(e.code);
+      console.log(e.response.body);
+    }
+  });
+};
 
-export const sendTo = async (chatId: number, text: string, parseMode?: ParseMode) => {
-  bot.sendMessage(chatId, text, { parse_mode: parseMode })
-    .catch(e => {
-      if (e.code === "ETELEGRAM") {
-        sendError(`Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`);
-      } else {
-        console.log(e.code);
-        console.log(e.response.body);
-      }
-    });
-}
-
-
-export const sendToGods = async (text: string, parseMode?: ParseMode) => {
-  return Promise.all(numberListFromVariable(godListVariable).map(id => sendTo(id, text, parseMode)));
-}
+export const sendToList = async (variableName: string, text: string, parseMode?: ParseMode) => {
+  return Promise.all(stringListFromVariable(variableName).map(id => sendTo(id, text, parseMode)));
+};
 
 export const sendToAdmins = async (text: string, parseMode?: ParseMode) => {
-  return Promise.all(numberListFromVariable(adminListVariable).map(id => sendTo(id, text, parseMode)));
-}
+  return sendToList(adminListVariable, text, parseMode);
+};
 
 export const sendError = async (e: any) => {
   console.error(e);
-  if (variableIsTrue("godsSendErrors")) {
-    sendToGods(e.toString() ? e.toString().slice(0, 3000) : "Error...");
+  if (variableIsTrue('godsSendErrors')) {
+    sendToAdmins(e.toString() ? e.toString().slice(0, 3000) : 'Error...');
   }
-}
-
-
+};
 
 export const variable = (variableName: string, value?: string | number) => {
   if (value === undefined) {
     const s = ls.getItem(variableName);
-    return s ? s : "";
+    return s ? s : '';
   }
   return ls.setItem(variableName, value.toString());
-}
+};
 
 export const variableNumber = (variableName: string, defaultValue: number = 0): number => {
   const s = ls.getItem(variableName);
   return Number(s) ? Number(s) : defaultValue;
-}
+};
 
 export const variableIsTrue = (variableName: string): boolean => {
-  return ls.getItem(variableName) === "1";
-}
+  return ls.getItem(variableName) === '1';
+};
 
 export const userIdsToInfo = async (variableName: string, extraInfo?: string[]) => {
   const userIds = stringListFromVariable(variableName);
 
   if (userIds.length > 0) {
-    return await Promise.all(userIds.map(async (n, i) => {
-      return await bot.getChat(n)
-        .then(chat => {
-          return `${chat.first_name} ${chat.last_name}, ${chat.username} (ID: ${n}${extraInfo ? `, ${extraInfo[i] ? extraInfo[i] : "no info"}` : ""})`;
+    return await Promise.all(
+      userIds.map(async (n, i) => {
+        return await bot.getChat(n).then(chat => {
+          return `${chat.first_name} ${chat.last_name}, ${chat.username} (ID: ${n}${
+            extraInfo ? `, ${extraInfo[i] ? extraInfo[i] : 'no info'}` : ''
+          })`;
         });
-      }));
+      }),
+    );
   } else {
     return [];
-  } 
-}
+  }
+};
 
-export const toggleUserIdInList = (userId: number, variableName: string) => {
+export const toggleUserIdInList = (userId: number | string, variableName: string) => {
   const userIds = stringListFromVariable(variableName);
 
   if (userIds.includes(userId.toString())) {
-    variable(variableName, userIds.filter(id => id !== userId.toString()).join("\n"));
+    variable(variableName, userIds.filter(id => id !== userId.toString()).join('\n'));
     return false;
   }
 
   userIds.push(userId.toString());
-  variable(variableName, userIds.join("\n"));
-  return true
-}
+  variable(variableName, userIds.join('\n'));
+  return true;
+};
 
 export const toggleAdmin = (userId: number) => {
   return toggleUserIdInList(userId, adminListVariable);
-}
-
-export const toggleGod = (userId: number) => {
-  return toggleUserIdInList(userId, godListVariable);
-}
+};

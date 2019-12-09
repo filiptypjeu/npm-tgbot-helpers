@@ -10,8 +10,7 @@ import {
   variableNumber,
   variable,
   sendToAdmins,
-  toggleGod,
-  sendToGods,
+  sendToList,
 } from '../index';
 
 initBot({
@@ -28,7 +27,7 @@ const ls = props.localStorage;
 test('properties', () => {
   expect(bot).toEqual(expect.any(TelegramBot));
   expect(ls).toEqual(expect.any(LocalStorage));
-  expect(props.globalVariables).toEqual(['godsSendErrors', 'testVariable']);
+  expect(props.globalVariables).toEqual(['adminsSendErrors', 'testVariable']);
   expect(props.userVariables).toEqual(['var1', 'var2']);
 });
 
@@ -62,8 +61,8 @@ test('variableIsTrue', () => {
 
 test('toggleUserIdInList', () => {
   variable('variable', '');
-  expect(toggleUserIdInList(12345, 'variable')).toEqual(true);
-  expect(toggleUserIdInList(54321, 'variable')).toEqual(true);
+  expect(toggleUserIdInList(11111, 'variable')).toEqual(true);
+  expect(toggleUserIdInList(22222, 'variable')).toEqual(true);
   expect(toggleUserIdInList(1, 'variable')).toEqual(true);
   expect(toggleUserIdInList(1, 'variable')).toEqual(false);
 });
@@ -74,14 +73,6 @@ test('toggleAdmin', () => {
   expect(toggleAdmin(54321)).toEqual(true);
   expect(toggleAdmin(1)).toEqual(true);
   expect(toggleAdmin(1)).toEqual(false);
-});
-
-test('toggleGod', () => {
-  variable('TGHELPERS#GODUSERIDS', '');
-  expect(toggleGod(23456)).toEqual(true);
-  expect(toggleGod(65432)).toEqual(true);
-  expect(toggleGod(2)).toEqual(true);
-  expect(toggleGod(2)).toEqual(false);
 });
 
 test('sendTo', () => {
@@ -97,14 +88,20 @@ test('sendTo', () => {
   expect(bot.sendMessage).toHaveBeenCalledTimes(3);
 });
 
-test('sendToAdmins', () => {
-  expect(sendToAdmins('message')).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenCalledWith(12345, 'message', { parse_mode: undefined });
-  expect(bot.sendMessage).toHaveBeenCalledWith(54321, 'message', { parse_mode: undefined });
+test('sendToList', () => {
+  expect(sendToList('variable', 'message')).rejects.toThrowError();
+
+  expect(bot.sendMessage).toHaveBeenCalledWith('11111', 'message', { parse_mode: undefined });
+  expect(bot.sendMessage).toHaveBeenCalledWith('22222', 'message', { parse_mode: undefined });
+
+  expect(bot.sendMessage).toHaveBeenCalledTimes(5);
 });
 
-test('sendToGods', () => {
-  expect(sendToGods('message')).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenCalledWith(23456, 'message', { parse_mode: undefined });
-  expect(bot.sendMessage).toHaveBeenCalledWith(65432, 'message', { parse_mode: undefined });
+test('sendToAdmins', () => {
+  expect(sendToAdmins('message')).rejects.toThrowError();
+
+  expect(bot.sendMessage).toHaveBeenCalledWith('12345', 'message', { parse_mode: undefined });
+  expect(bot.sendMessage).toHaveBeenCalledWith('54321', 'message', { parse_mode: undefined });
+
+  expect(bot.sendMessage).toHaveBeenCalledTimes(7);
 });
