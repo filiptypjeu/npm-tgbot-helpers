@@ -32,7 +32,7 @@ const stringListFromVariable = (variableName: string): string[] => {
 };
 
 export const initBot = (initWith: IBotHelperInit): TelegramBot => {
-  bot = new TelegramBot(initWith.telegramBotToken);
+  bot = new TelegramBot(initWith.telegramBotToken, { polling: true });
   ls = new LocalStorage(initWith.localStoragePath);
 
   // admins = numberListFromVariable(adminListVariable);
