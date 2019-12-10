@@ -1,11 +1,12 @@
 import { LocalStorage } from 'node-localstorage';
-import TelegramBot, { ParseMode } from 'node-telegram-bot-api';
+import TelegramBot, { ParseMode, Message } from 'node-telegram-bot-api';
 
 export interface IBotHelperInit {
   telegramBotToken: string;
   localStoragePath: string;
   globalVariables?: string[];
   userVariables?: string[];
+  commands?: IBotHelperCommand[];
 }
 
 export interface IBotHelperProps {
@@ -13,14 +14,22 @@ export interface IBotHelperProps {
   localStorage: LocalStorage;
   globalVariables: string[];
   userVariables: string[];
+  commands: IBotHelperCommand[];
+}
+
+export interface IBotHelperCommand {
+  command: string;
+  regexp?: RegExp;
+  groupVariable?: string;
+  type?: string;
+  description?: string;
+  callback: (msg: Message) => void;
 }
 
 let bot: TelegramBot;
 let ls: LocalStorage;
 
-// let gods: number[] = [];
-// let admins: number[] = [];
-
+let commands: IBotHelperCommand[] = [];
 let uVars: string[] = [];
 let gVars: string[] = ['adminsSendErrors'];
 
@@ -35,14 +44,36 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   bot = new TelegramBot(initWith.telegramBotToken, { polling: true });
   ls = new LocalStorage(initWith.localStoragePath);
 
-  // admins = numberListFromVariable(adminListVariable);
-  // gods = numberListFromVariable(godListVariable);
+  commands = initWith.commands ? initWith.commands : [];
+
+  commands.forEach(c => {
+    if (!c.regexp) {
+      c.regexp = new RegExp(`/${c.command}\\b`);
+    }
+    bot.onText(c.regexp, msg => {
+      console.log(`Command /${c.command} called by user ${msg.from!.id}.`);
+      if (c.groupVariable && !isInList(msg.chat.id, c.groupVariable)) {
+        console.log(`Callback NOT called.`);
+        return;
+      }
+      console.log(`Callback called.`);
+      return c.callback(msg);
+    });
+  });
 
   if (initWith.globalVariables) {
     initWith.globalVariables.forEach(s => gVars.push(s));
   }
   gVars = gVars.sort();
-  uVars = (initWith.userVariables ? initWith.userVariables : []).sort();
+
+  if (initWith.userVariables) {
+    initWith.userVariables.forEach(s => uVars.push(s));
+  }
+  uVars = uVars.sort();
+
+  console.log(
+    `Telegram bot initialized with ${gVars.length} global variables, ${uVars.length} user variables and ${commands.length} commands.`,
+  );
 
   return bot;
 };
@@ -53,6 +84,7 @@ export const properties = (): IBotHelperProps => {
     localStorage: ls,
     telegramBot: bot,
     userVariables: uVars,
+    commands: commands,
   };
   return p;
 };
