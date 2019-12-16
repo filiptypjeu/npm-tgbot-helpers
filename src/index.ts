@@ -142,20 +142,20 @@ export const properties = (): IBotHelperProps => {
     telegramBot: bot,
     userVariables: uVars,
     commands: commands,
+    groups: groups
   };
   return p;
 };
 
-export const globalVariables = (): string[] => {
-  return gVars;
-};
+export const getArguments = (text?: string): string[] => {
+  if (text) {
+    return text.split("\n").join(" ").split(" ").filter(s => s).slice(1);
+  }
+  return [];
+}
 
-export const isInList = (userId: number | string, variableName: string) => {
-  return stringListFromVariable(variableName).includes(userId.toString());
-};
-
-export const isAdmin = (userId: number) => {
-  return isInList(userId, adminListVariable);
+export const isInGroup = (groupName: string, userId: number | string) => {
+  return variableToList(groupName).includes(userId.toString());
 };
 
 export const sendTo = async (userId: number | string, text: string, parseMode?: ParseMode) => {
@@ -171,12 +171,8 @@ export const sendTo = async (userId: number | string, text: string, parseMode?: 
   });
 };
 
-export const sendToList = async (variableName: string, text: string, parseMode?: ParseMode) => {
-  return Promise.all(stringListFromVariable(variableName).map(id => sendTo(id, text, parseMode)));
-};
-
-export const sendToAdmins = async (text: string, parseMode?: ParseMode) => {
-  return sendToList(adminListVariable, text, parseMode);
+export const sendToGroup = async (groupName: string, text: string, parseMode?: ParseMode) => {
+  return Promise.all(variableToList(groupName).map(id => sendTo(id, text, parseMode)));
 };
 
 export const sendError = async (e: any) => {
