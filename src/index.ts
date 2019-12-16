@@ -177,8 +177,8 @@ export const sendToGroup = async (groupName: string, text: string, parseMode?: P
 
 export const sendError = async (e: any) => {
   console.error(e);
-  if (variableIsTrue('godsSendErrors')) {
-    sendToAdmins(e.toString() ? e.toString().slice(0, 3000) : 'Error...');
+  if (variableToBool('godsSendErrors')) {
+    sendToGroup(errorGroup, e.toString() ? e.toString().slice(0, 3000) : 'Error...');
   }
 };
 
@@ -190,17 +190,24 @@ export const variable = (variableName: string, value?: string | number) => {
   return ls.setItem(variableName, value.toString());
 };
 
-export const variableNumber = (variableName: string, defaultValue: number = 0): number => {
+export const variableToNumber = (variableName: string, defaultValue: number = 0): number => {
   const s = ls.getItem(variableName);
   return Number(s) ? Number(s) : defaultValue;
 };
 
-export const variableIsTrue = (variableName: string): boolean => {
+export const variableToBool = (variableName: string): boolean => {
   return ls.getItem(variableName) === '1';
 };
 
-export const userIdsToInfo = async (variableName: string, extraInfo?: string[]) => {
-  const userIds = stringListFromVariable(variableName);
+export const variableToList = (variableName: string): string[] => {
+  const s = variable(variableName);
+  return s ? s.trim().split('\n') : [];
+};
+
+
+
+export const groupToUserInfo = async (variableName: string, extraInfo?: string[]) => {
+  const userIds = variableToList(variableName);
 
   if (userIds.length > 0) {
     return await Promise.all(
@@ -217,16 +224,16 @@ export const userIdsToInfo = async (variableName: string, extraInfo?: string[]) 
   }
 };
 
-export const toggleUserIdInList = (userId: number | string, variableName: string) => {
-  const userIds = stringListFromVariable(variableName);
+export const toggleUserIdInGroup = (groupName: string, userId: number | string) => {
+  const userIds = variableToList(groupName);
 
   if (userIds.includes(userId.toString())) {
-    variable(variableName, userIds.filter(id => id !== userId.toString()).join('\n'));
+    variable(groupName, userIds.filter(id => id !== userId.toString()).join('\n'));
     return false;
   }
 
   userIds.push(userId.toString());
-  variable(variableName, userIds.join('\n'));
+  variable(groupName, userIds.join('\n'));
   return true;
 };
 
