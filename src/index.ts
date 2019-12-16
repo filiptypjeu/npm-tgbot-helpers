@@ -1,12 +1,27 @@
 import { LocalStorage } from 'node-localstorage';
 import TelegramBot, { ParseMode, Message } from 'node-telegram-bot-api';
+import fs from "fs";
+import os from "os";
+
+/**
+ * @todo
+ * - Command allowed for multiple groups?
+ * - Pre-defined commands (/init, /ip, /commands, /help etc.)
+ * - Add suppoert for command@BotName
+ * - Group existense checks
+ * - Several commands
+ */
 
 export interface IBotHelperInit {
   telegramBotToken: string;
+  telegramBotName?: string;
   localStoragePath: string;
   globalVariables?: string[];
   userVariables?: string[];
   commands?: IBotHelperCommand[];
+  groups?: string[];
+  errorGroup?: string;
+  commandLogPath?: string;
 }
 
 export interface IBotHelperProps {
@@ -15,13 +30,16 @@ export interface IBotHelperProps {
   globalVariables: string[];
   userVariables: string[];
   commands: IBotHelperCommand[];
+  groups: string[];
 }
 
 export interface IBotHelperCommand {
   command: string;
   regexp?: RegExp;
-  groupVariable?: string;
-  type?: string;
+  group?: string;
+  privateOnly?: boolean;
+  matchBeginningOnly?: boolean;
+  hide?: boolean;
   description?: string;
   callback: (msg: Message) => void;
 }
