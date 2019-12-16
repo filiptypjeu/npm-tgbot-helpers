@@ -48,10 +48,15 @@ let bot: TelegramBot;
 let ls: LocalStorage;
 
 let commands: IBotHelperCommand[] = [];
+let groups: string[] = [];
+let errorGroup: string = "";
 let uVars: string[] = [];
-let gVars: string[] = ['adminsSendErrors'];
+let gVars: string[] = [];
+let commandLogPath = "./logs/commands.log";
 
-const adminListVariable = 'TGHELPERS#ADMINUSERIDS';
+const commandRegExp = (c: IBotHelperCommand): RegExp => {
+  return c.matchBeginningOnly ? new RegExp(`^/${c.command}`) : new RegExp(`^/${c.command}\\b`);
+}
 
 const stringListFromVariable = (variableName: string): string[] => {
   const s = variable(variableName);
@@ -62,36 +67,43 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   bot = new TelegramBot(initWith.telegramBotToken, { polling: true });
   ls = new LocalStorage(initWith.localStoragePath);
 
-  commands = initWith.commands ? initWith.commands : [];
+  if (initWith.groups) groups = initWith.groups;
+  if (initWith.errorGroup) errorGroup = initWith.errorGroup;
+  if (initWith.globalVariables) gVars = initWith.globalVariables;
+  if (initWith.userVariables) uVars = initWith.userVariables;
+  if (initWith.commandLogPath) commandLogPath = initWith.commandLogPath;
+  if (initWith.commands) commands = initWith.commands;
 
-  commands.forEach(c => {
-    if (!c.regexp) {
-      c.regexp = new RegExp(`/${c.command}\\b`);
-    }
-    bot.onText(c.regexp, msg => {
-      console.log(`Command /${c.command} called by user ${msg.from!.id}.`);
-      if (c.groupVariable && !isInList(msg.chat.id, c.groupVariable)) {
-        console.log(`Callback NOT called.`);
+  commands.forEach(async c => {
+    bot.onText(commandRegExp(c), msg => {
+      fs.appendFile(commandLogPath,
+        `${Date.now()};/${c.command};${msg.from!.id};${msg.from!.username}\n`,
+        e => {
+          if (e) {
+            sendError(e);
+          }
+        }
+      );
+
+      console.log(`User ${msg.from!.id} used command /${c.command}.`);
+
+      if (c.group && !isInGroup(c.group, msg.chat.id)) {
+        console.log(`User not in group ${c.group}.`);
         return;
       }
-      console.log(`Callback called.`);
+
+      if (c.privateOnly && msg.chat.type !== 'private') {
+        sendTo(msg.chat.id, "The command can only be used in a private chat.");
+        console.log(`Not in private chat.`);
+        return;
+      }
+
+      console.log("Callback called.")
       return c.callback(msg);
     });
   });
 
-  if (initWith.globalVariables) {
-    initWith.globalVariables.forEach(s => gVars.push(s));
-  }
-  gVars = gVars.sort();
-
-  if (initWith.userVariables) {
-    initWith.userVariables.forEach(s => uVars.push(s));
-  }
-  uVars = uVars.sort();
-
-  console.log(
-    `Telegram bot initialized with ${gVars.length} global variables, ${uVars.length} user variables and ${commands.length} commands.`,
-  );
+  console.log(`Telegram bot initialized with ${commands.length} commands, ${groups.length} groups, ${gVars.length} global variables and ${uVars.length} user variables.`);
 
   return bot;
 };
