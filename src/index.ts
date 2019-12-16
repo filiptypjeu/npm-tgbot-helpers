@@ -47,6 +47,7 @@ export interface IBotHelperCommand {
 let bot: TelegramBot;
 let ls: LocalStorage;
 
+const startTime = new Date();
 let commands: IBotHelperCommand[] = [];
 let groups: string[] = [];
 let errorGroup: string = "";
@@ -237,6 +238,71 @@ export const toggleUserIdInGroup = (groupName: string, userId: number | string) 
   return true;
 };
 
-export const toggleAdmin = (userId: number) => {
-  return toggleUserIdInList(userId, adminListVariable);
-};
+export const defaultCommandUptime = (msg: TelegramBot.Message) => {
+  Promise.all([getDurationString(startTime), getDurationString(os.uptime() * 1000)]).then(([s1, s2]) =>
+    sendTo(msg.chat.id, `Bot uptime: ${s1}\nOS uptime: ${s2}`)
+  );
+}
+
+export const defaultCommandIP = (msg: TelegramBot.Message) => {
+  const ifaces = os.networkInterfaces();
+  let ips = "";
+
+  Object.keys(ifaces).forEach(ifname => {
+    let alias = 0;
+    ifaces[ifname].forEach(iface => {
+      // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
+      if ("IPv4" !== iface.family || iface.internal !== false) {
+        return;
+      }
+
+      alias ? (ips += `${ifname}:${alias} ${iface.address}\n`) : (ips += `${ifname} ${iface.address}\n`);
+
+      ++alias;
+    });
+  });
+
+  sendTo(msg.chat.id, ips ? ips : "No IP addresses found.");
+}
+
+export const defaultCommandCommands = (msg: TelegramBot.Message) => {
+  groupByGroup(commands).forEach((cmds, key) => {
+    if (!key || isInGroup(key, msg.chat.id)) {
+      sendTo(msg.chat.id, `<b>Commands accessible to ${key ? `group ${key}` : "everybody"}:</b>\n` + cmds.map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}`).sort().join("\n"), "HTML");
+    }
+  });
+}
+
+export const defaultCommandHelp = (msg: TelegramBot.Message) => {
+  sendTo(msg.chat.id, commands.filter(cmd => cmd.group ? isInGroup(cmd.group, msg.chat.id) : !cmd.hide).map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}:  ${cmd.description ? cmd.description : "No description available."}`).sort().join("\n\n"), "HTML");
+}
+
+export const defaultCommandKill = (msg: TelegramBot.Message) => {
+  sendTo(msg.chat.id, "Good bye!");
+  setTimeout(() => {
+    return process.exit();
+  }, 3000);
+}
+
+export const defaultCommandVar = (msg: TelegramBot.Message) => {
+  const args = getArguments(msg.text);
+
+  if (!args[0]) {
+    sendTo(msg.chat.id, "<b>Available global variables:</b>\n" + gVars.map((v, i) => {
+      const value = variable(v);
+      return `${i} ${v} ${value ? value : "null"}`;
+    }).join("\n"), "HTML");
+
+  } else if (!args[1]) {
+    sendTo(msg.chat.id, "Please provide two arguments.");
+
+  } else if (Number(args[0]) >= 0 && Number(args[0]) < gVars.length) {
+    variable(gVars[Number(args[0])], args[1]);
+    sendTo(msg.chat.id, `Global variable set: <b>${gVars[Number(args[0])]} = ${variable(gVars[Number(args[0])])}</b>`, "HTML");
+
+  } else {
+    sendTo(msg.chat.id, `Global variable ${args[0]} does not exist.`);
+  }
+
+  return;
+}
