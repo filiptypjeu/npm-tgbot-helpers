@@ -58,10 +58,37 @@ const commandRegExp = (c: IBotHelperCommand): RegExp => {
   return c.matchBeginningOnly ? new RegExp(`^/${c.command}`) : new RegExp(`^/${c.command}\\b`);
 }
 
-const stringListFromVariable = (variableName: string): string[] => {
-  const s = variable(variableName);
-  return s ? s.trim().split('\n') : [];
-};
+/**
+ * @param {number | Date} value is the value based on which the duration should be calculated on. Can either be the number of milliseconds of the duration, or a Date object that specifies the start time.
+ *
+ * @returns {string} the duration in a 'days hours minutes seconds' format.
+ */
+const getDurationString = (value: number | Date) => {
+  let v: number;
+  if (typeof value === "number") {
+    v = value;
+  } else {
+    v = new Date().valueOf() - value.valueOf();
+  }
+  const d = Math.floor(v / (3600000 * 24));
+  const h = Math.floor((v - d * 3600000 * 24) / 3600000);
+  const m = Math.floor((v - d * 3600000 * 24 - h * 3600000) / 60000);
+  const s = Math.floor((v - d * 3600000 * 24 - h * 3600000 - m * 60000) / 1000);
+
+  return `${d} day${d === 1 ? "" : "s"} ${h} hour${h === 1 ? "" : "s"} ${m} minute${m === 1 ? "" : "s"} ${s} second${
+    s === 1 ? "" : "s"
+  }`;
+}
+
+const groupByGroup = (cmds: IBotHelperCommand[]) => {
+  const m = new Map<string, IBotHelperCommand[]>();
+  commands.forEach(cmd => {
+    const g = cmd.group || "";
+    m.set(g, (m.get(g) || []).concat(cmd));
+  });
+
+  return m;
+}
 
 export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   bot = new TelegramBot(initWith.telegramBotToken, { polling: true });
