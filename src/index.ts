@@ -178,9 +178,7 @@ export const sendToGroup = async (groupName: string, text: string, parseMode?: P
 
 export const sendError = async (e: any) => {
   console.error(e);
-  if (variableToBool('godsSendErrors')) {
-    sendToGroup(errorGroup, e.toString() ? e.toString().slice(0, 3000) : 'Error...');
-  }
+  sendToGroup(errorGroup, e.toString() ? e.toString().slice(0, 3000) : 'Error...');
 };
 
 export const variable = (variableName: string, value?: string | number) => {
