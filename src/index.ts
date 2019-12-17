@@ -2,6 +2,7 @@ import fs from "fs";
 import { LocalStorage } from "node-localstorage";
 import TelegramBot, { Message, ParseMode } from "node-telegram-bot-api";
 import os from "os";
+import readLastLines from "read-last-lines";
 
 /**
  * @todo

@@ -37,7 +37,9 @@
         "url": "git@github.com:filiptypjeu/npm-tgbot-helpers.git"
     },
     "homepage": "https://github.com/filiptypjeu/npm-tgbot-helpers",
-    "dependencies": {},
+    "dependencies": {
+        "read-last-lines": "^1.7.1"
+    },
     "files": [
         "dist/**/*"
     ],
