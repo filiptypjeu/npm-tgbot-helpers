@@ -1,7 +1,7 @@
-import fs from 'fs';
-import { LocalStorage } from 'node-localstorage';
-import TelegramBot, { Message, ParseMode } from 'node-telegram-bot-api';
-import os from 'os';
+import fs from "fs";
+import { LocalStorage } from "node-localstorage";
+import TelegramBot, { Message, ParseMode } from "node-telegram-bot-api";
+import os from "os";
 
 /**
  * @todo
@@ -47,10 +47,10 @@ let ls: LocalStorage;
 
 const startTime = new Date();
 let commands: IBotHelperCommand[] = [];
-let errorGroup: string = '';
+let errorGroup: string = "";
 let uVars: string[] = [];
 let gVars: string[] = [];
-let commandLogPath = './logs/commands.log';
+let commandLogPath = "./logs/commands.log";
 
 const commandRegExp = (c: IBotHelperCommand): RegExp => {
   return c.matchBeginningOnly ? new RegExp(`^/${c.command}`) : new RegExp(`^/${c.command}\\b`);
@@ -63,7 +63,7 @@ const commandRegExp = (c: IBotHelperCommand): RegExp => {
  */
 const getDurationString = (value: number | Date) => {
   let v: number;
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     v = value;
   } else {
     v = new Date().valueOf() - value.valueOf();
@@ -73,15 +73,15 @@ const getDurationString = (value: number | Date) => {
   const m = Math.floor((v - d * 3600000 * 24 - h * 3600000) / 60000);
   const s = Math.floor((v - d * 3600000 * 24 - h * 3600000 - m * 60000) / 1000);
 
-  return `${d} day${d === 1 ? '' : 's'} ${h} hour${h === 1 ? '' : 's'} ${m} minute${m === 1 ? '' : 's'} ${s} second${
-    s === 1 ? '' : 's'
+  return `${d} day${d === 1 ? "" : "s"} ${h} hour${h === 1 ? "" : "s"} ${m} minute${m === 1 ? "" : "s"} ${s} second${
+    s === 1 ? "" : "s"
   }`;
 };
 
 const groupByGroup = (cmds: IBotHelperCommand[]) => {
   const m = new Map<string, IBotHelperCommand[]>();
   commands.forEach(cmd => {
-    const g = cmd.group || '';
+    const g = cmd.group || "";
     m.set(g, (m.get(g) || []).concat(cmd));
   });
 
@@ -123,19 +123,19 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
         return;
       }
 
-      if (c.privateOnly && msg.chat.type !== 'private') {
-        sendTo(msg.chat.id, 'The command can only be used in a private chat.');
+      if (c.privateOnly && msg.chat.type !== "private") {
+        sendTo(msg.chat.id, "The command can only be used in a private chat.");
         console.log(`Not in private chat.`);
         return;
       }
 
-      console.log('Callback called.');
+      console.log("Callback called.");
       return c.callback(msg);
     });
   });
 
   console.log(
-    `Telegram bot initialized with ${commands.length} commands, ${gVars.length} global variables and ${uVars.length} user variables.`,
+    `Telegram bot initialized with ${commands.length} commands, ${gVars.length} global variables and ${uVars.length} user variables.`
   );
 
   return bot;
@@ -155,9 +155,9 @@ export const properties = (): IBotHelperProps => {
 export const getArguments = (text?: string): string[] => {
   if (text) {
     return text
-      .split('\n')
-      .join(' ')
-      .split(' ')
+      .split("\n")
+      .join(" ")
+      .split(" ")
       .filter(s => s)
       .slice(1);
   }
@@ -170,9 +170,9 @@ export const isInGroup = (groupName: string, userId: number | string) => {
 
 export const sendTo = async (userId: number | string, text: string, parseMode?: ParseMode) => {
   bot.sendMessage(userId, text, { parse_mode: parseMode }).catch(e => {
-    if (e.code === 'ETELEGRAM') {
+    if (e.code === "ETELEGRAM") {
       sendError(
-        `Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`,
+        `Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`
       );
     } else {
       console.log(e.code);
@@ -187,13 +187,13 @@ export const sendToGroup = async (groupName: string, text: string, parseMode?: P
 
 export const sendError = async (e: any) => {
   console.error(e);
-  return sendToGroup(errorGroup, e.toString() ? e.toString().slice(0, 3000) : 'Error...');
+  return sendToGroup(errorGroup, e.toString() ? e.toString().slice(0, 3000) : "Error...");
 };
 
 export const variable = (variableName: string, value?: string | number) => {
   if (value === undefined) {
     const s = ls.getItem(variableName);
-    return s ? s : '';
+    return s ? s : "";
   }
   return ls.setItem(variableName, value.toString());
 };
@@ -204,12 +204,12 @@ export const variableToNumber = (variableName: string, defaultValue: number = 0)
 };
 
 export const variableToBool = (variableName: string): boolean => {
-  return ls.getItem(variableName) === '1';
+  return ls.getItem(variableName) === "1";
 };
 
 export const variableToList = (variableName: string): string[] => {
   const s = variable(variableName);
-  return s ? s.trim().split('\n') : [];
+  return s ? s.trim().split("\n") : [];
 };
 
 export const groupToUserInfo = async (variableName: string, extraInfo?: string[]) => {
@@ -220,10 +220,10 @@ export const groupToUserInfo = async (variableName: string, extraInfo?: string[]
       userIds.map(async (n, i) => {
         return await bot.getChat(n).then(chat => {
           return `${chat.first_name} ${chat.last_name}, ${chat.username} (ID: ${n}${
-            extraInfo ? `, ${extraInfo[i] ? extraInfo[i] : 'no info'}` : ''
+            extraInfo ? `, ${extraInfo[i] ? extraInfo[i] : "no info"}` : ""
           })`;
         });
-      }),
+      })
     );
   } else {
     return [];
@@ -234,30 +234,30 @@ export const toggleUserIdInGroup = (groupName: string, userId: number | string) 
   const userIds = variableToList(groupName);
 
   if (userIds.includes(userId.toString())) {
-    variable(groupName, userIds.filter(id => id !== userId.toString()).join('\n'));
+    variable(groupName, userIds.filter(id => id !== userId.toString()).join("\n"));
     return false;
   }
 
   userIds.push(userId.toString());
-  variable(groupName, userIds.join('\n'));
+  variable(groupName, userIds.join("\n"));
   return true;
 };
 
 export const defaultCommandUptime = async (msg: TelegramBot.Message) => {
   return Promise.all([getDurationString(startTime), getDurationString(os.uptime() * 1000)]).then(([s1, s2]) =>
-    sendTo(msg.chat.id, `Bot uptime: ${s1}\nOS uptime: ${s2}`),
+    sendTo(msg.chat.id, `Bot uptime: ${s1}\nOS uptime: ${s2}`)
   );
 };
 
 export const defaultCommandIP = async (msg: TelegramBot.Message) => {
   const ifaces = os.networkInterfaces();
-  let ips = '';
+  let ips = "";
 
   Object.keys(ifaces).forEach(ifname => {
     let alias = 0;
     ifaces[ifname].forEach(iface => {
       // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
-      if (iface.family !== 'IPv4' || iface.internal) {
+      if (iface.family !== "IPv4" || iface.internal) {
         return;
       }
 
@@ -267,7 +267,7 @@ export const defaultCommandIP = async (msg: TelegramBot.Message) => {
     });
   });
 
-  return sendTo(msg.chat.id, ips ? ips : 'No IP addresses found.');
+  return sendTo(msg.chat.id, ips ? ips : "No IP addresses found.");
 };
 
 export const defaultCommandCommands = (msg: TelegramBot.Message) => {
@@ -275,12 +275,12 @@ export const defaultCommandCommands = (msg: TelegramBot.Message) => {
     if (!key || isInGroup(key, msg.chat.id)) {
       sendTo(
         msg.chat.id,
-        `<b>Commands accessible to ${key ? `group ${key}` : 'everybody'}:</b>\n` +
+        `<b>Commands accessible to ${key ? `group ${key}` : "everybody"}:</b>\n` +
           cmds
-            .map(cmd => `/${cmd.command}${cmd.privateOnly ? '*' : ''}`)
+            .map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}`)
             .sort()
-            .join('\n'),
-        'HTML',
+            .join("\n"),
+        "HTML"
       );
     }
   });
@@ -293,18 +293,18 @@ export const defaultCommandHelp = async (msg: TelegramBot.Message) => {
       .filter(cmd => (cmd.group ? isInGroup(cmd.group, msg.chat.id) : !cmd.hide))
       .map(
         cmd =>
-          `/${cmd.command}${cmd.privateOnly ? '*' : ''}:  ${
-            cmd.description ? cmd.description : 'No description available.'
-          }`,
+          `/${cmd.command}${cmd.privateOnly ? "*" : ""}:  ${
+            cmd.description ? cmd.description : "No description available."
+          }`
       )
       .sort()
-      .join('\n\n'),
-    'HTML',
+      .join("\n\n"),
+    "HTML"
   );
 };
 
 export const defaultCommandKill = (msg: TelegramBot.Message) => {
-  sendTo(msg.chat.id, 'Good bye!');
+  sendTo(msg.chat.id, "Good bye!");
   setTimeout(() => {
     return process.exit();
   }, 3000);
@@ -316,23 +316,23 @@ export const defaultCommandVar = async (msg: TelegramBot.Message) => {
   if (!args[0]) {
     return sendTo(
       msg.chat.id,
-      '<b>Available global variables:</b>\n' +
+      "<b>Available global variables:</b>\n" +
         gVars
           .map((v, i) => {
             const value = variable(v);
-            return `${i} ${v} ${value ? value : 'null'}`;
+            return `${i} ${v} ${value ? value : "null"}`;
           })
-          .join('\n'),
-      'HTML',
+          .join("\n"),
+      "HTML"
     );
   } else if (!args[1]) {
-    return sendTo(msg.chat.id, 'Please provide two arguments.');
+    return sendTo(msg.chat.id, "Please provide two arguments.");
   } else if (Number(args[0]) >= 0 && Number(args[0]) < gVars.length) {
     variable(gVars[Number(args[0])], args[1]);
     return sendTo(
       msg.chat.id,
       `Global variable set: <b>${gVars[Number(args[0])]} = ${variable(gVars[Number(args[0])])}</b>`,
-      'HTML',
+      "HTML"
     );
   } else {
     return sendTo(msg.chat.id, `Global variable ${args[0]} does not exist.`);
