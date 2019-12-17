@@ -153,6 +153,17 @@ export const properties = (): IBotHelperProps => {
   return p;
 };
 
+export const msgInfoToString = (msg: TelegramBot.Message): string[] => {
+  return [
+    `Username: ${msg.from!.username}`,
+    `First name: ${msg.from!.first_name}`,
+    `Last name: ${msg.from!.last_name}`,
+    `Is bot: ${msg.from!.is_bot}`,
+    `User ID: ${msg.from!.id}`,
+    `Chat type: ${msg.chat.type}`,
+  ];
+};
+
 export const getArguments = (text?: string): string[] => {
   if (text) {
     return text
@@ -338,4 +349,25 @@ export const defaultCommandVar = async (msg: TelegramBot.Message) => {
   } else {
     return sendTo(msg.chat.id, `Global variable ${args[0]} does not exist.`);
   }
+};
+
+export const defaultCommandAdmin = (groupName: string) => {
+  return (msg: TelegramBot.Message) => {
+    if (getArguments(msg.text)[0] === undefined) {
+      sendTo(msg.chat.id, `Use "/admin your message here" to send a message to the administrator.`);
+    } else {
+      sendToGroup(
+        groupName,
+        `<b>Message from user:</b>\n - ` + msgInfoToString(msg).join(" - ") + `\n - Text: ${msg.text}`,
+        "HTML"
+      );
+    }
+  };
+};
+
+export const defaultCommandCommandlog = async (msg: TelegramBot.Message) => {
+  return readLastLines
+    .read(commandLogPath, Number(getArguments(msg.text)[0]) < 50 ? Number(getArguments(msg.text)[0]) : 50)
+    .then(s => sendTo(msg.chat.id, s ? s : `File ${commandLogPath} is empty.`))
+    .catch(e => sendError(e));
 };
