@@ -9,7 +9,6 @@ import readLastLines from "read-last-lines";
  * - Command allowed for multiple groups?
  * - Add support for command@BotName
  * - Re-add groups variable for group existense checks
- * - Default method for logs
  * - Fix "hide"
  */
 
@@ -288,11 +287,11 @@ export const defaultCommandIP = async (msg: TelegramBot.Message) => {
 };
 
 export const defaultCommandCommands = (msg: TelegramBot.Message) => {
-  groupByGroup(commands).forEach((cmds, key) => {
-    if (!key || isInGroup(key, msg.chat.id)) {
+  groupByGroup(commands).forEach((cmds, group) => {
+    if (!group || isInGroup(group, msg.chat.id)) {
       sendTo(
         msg.chat.id,
-        `<b>Commands accessible to ${key ? `group ${key}` : "everybody"}:</b>\n` +
+        `<b>Commands accessible to ${group ? `group ${group}` : "everybody"}:</b>\n` +
           cmds
             .map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}`)
             .sort()
@@ -370,9 +369,20 @@ export const defaultCommandAdmin = (groupName: string) => {
   };
 };
 
-export const defaultCommandCommandlog = async (msg: TelegramBot.Message) => {
-  return readLastLines
-    .read(commandLogPath, Number(getArguments(msg.text)[0]) < 50 ? Number(getArguments(msg.text)[0]) : 50)
-    .then(s => sendTo(msg.chat.id, s ? s : `File ${commandLogPath} is empty.`))
-    .catch(e => sendError(e));
+export const defaultCommandLog = async (logPath: string) => {
+  return async (msg: TelegramBot.Message) => {
+    return readLastLines
+      .read(logPath, Number(getArguments(msg.text)[0]) < 50 ? Number(getArguments(msg.text)[0]) : 50)
+      .then(s => sendTo(msg.chat.id, s ? s : `File ${logPath} is empty.`))
+      .catch(e => sendError(e));
+  }
+};
+
+export const defaultCommandInit = (groupName: string) => {
+  return (msg: TelegramBot.Message) => {
+    const userIds = variableToList(groupName);
+    if (!userIds.length) {
+      toggleUserIdInGroup(groupName, msg.chat.id);
+    }
+  };
 };
