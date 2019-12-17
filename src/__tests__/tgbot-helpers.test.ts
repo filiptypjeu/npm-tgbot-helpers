@@ -4,13 +4,16 @@ import {
   properties,
   initBot,
   sendTo,
-  toggleAdmin,
-  toggleUserIdInList,
-  variableIsTrue,
-  variableNumber,
+  toggleUserIdInGroup,
+  variableToBool,
+  variableToNumber,
+  variableToList,
   variable,
-  sendToAdmins,
-  sendToList,
+  sendToGroup,
+  getArguments,
+  isInGroup,
+  sendError,
+  groupToUserInfo,
 } from '../index';
 
 initBot({
@@ -18,6 +21,7 @@ initBot({
   localStoragePath: './src/__tests__/variables/',
   globalVariables: ['testVariable'],
   userVariables: ['var1', 'var2'],
+  errorGroup: "errorgroup"
 });
 
 const props = properties();
@@ -27,7 +31,7 @@ const ls = props.localStorage;
 test('properties', () => {
   expect(bot).toEqual(expect.any(TelegramBot));
   expect(ls).toEqual(expect.any(LocalStorage));
-  expect(props.globalVariables).toEqual(['adminsSendErrors', 'testVariable']);
+  expect(props.globalVariables).toEqual(['testVariable']);
   expect(props.userVariables).toEqual(['var1', 'var2']);
 });
 
@@ -44,35 +48,49 @@ test('variable', () => {
   expect(variable('v3')).toEqual('string');
 });
 
-test('variableNumber', () => {
-  expect(variableNumber('v1')).toEqual(123);
-  expect(variableNumber('v2')).toEqual(1);
-  expect(variableNumber('v3')).toEqual(0);
-  expect(variableNumber('v1', 5)).toEqual(123);
-  expect(variableNumber('v2', 5)).toEqual(1);
-  expect(variableNumber('v3', 5)).toEqual(5);
+test('variableToNumber', () => {
+  expect(variableToNumber('v1')).toEqual(123);
+  expect(variableToNumber('v2')).toEqual(1);
+  expect(variableToNumber('v3')).toEqual(0);
+  expect(variableToNumber('v1', 5)).toEqual(123);
+  expect(variableToNumber('v2', 5)).toEqual(1);
+  expect(variableToNumber('v3', 5)).toEqual(5);
 });
 
-test('variableIsTrue', () => {
-  expect(variableIsTrue('v1')).toEqual(false);
-  expect(variableIsTrue('v2')).toEqual(true);
-  expect(variableIsTrue('v3')).toEqual(false);
+test('variableToBool', () => {
+  expect(variableToBool('v1')).toEqual(false);
+  expect(variableToBool('v2')).toEqual(true);
+  expect(variableToBool('v3')).toEqual(false);
 });
 
-test('toggleUserIdInList', () => {
-  variable('variable', '');
-  expect(toggleUserIdInList(11111, 'variable')).toEqual(true);
-  expect(toggleUserIdInList(22222, 'variable')).toEqual(true);
-  expect(toggleUserIdInList(1, 'variable')).toEqual(true);
-  expect(toggleUserIdInList(1, 'variable')).toEqual(false);
+test('toggleUserIdInGroup', () => {
+  variable('group', '');
+  variable('errorgroup', '');
+  expect(toggleUserIdInGroup('group', 11111)).toEqual(true);
+  expect(toggleUserIdInGroup('group', 22222)).toEqual(true);
+  expect(toggleUserIdInGroup('group', 1)).toEqual(true);
+  expect(toggleUserIdInGroup('group', 1)).toEqual(false);
+  expect(toggleUserIdInGroup('errorgroup', 33333)).toEqual(true);
 });
 
-test('toggleAdmin', () => {
-  variable('TGHELPERS#ADMINUSERIDS', '');
-  expect(toggleAdmin(12345)).toEqual(true);
-  expect(toggleAdmin(54321)).toEqual(true);
-  expect(toggleAdmin(1)).toEqual(true);
-  expect(toggleAdmin(1)).toEqual(false);
+test('variableToList', () => {
+  expect(variableToList('group')).toEqual(['11111', '22222']);
+  expect(variableToList('errorgroup')).toEqual(['33333']);
+  expect(variableToList('notagroup')).toEqual([]);
+});
+
+test('isInGroup', () => {
+  expect(isInGroup('group', 11111)).toEqual(true);
+  expect(isInGroup('group', 22222)).toEqual(true);
+  expect(isInGroup('group', 33333)).toEqual(false);
+  expect(isInGroup('errorgroup', 33333)).toEqual(true);
+  expect(isInGroup('notagroup', 11111)).toEqual(false);
+});
+
+test('getArguments', () => {
+  expect(getArguments('/test a b c')).toEqual(['a', 'b', 'c']);
+  expect(getArguments('test a b c')).toEqual(['a', 'b', 'c']);
+  expect(getArguments('/test\na     b   \n\n   \n c   \n  ')).toEqual(['a', 'b', 'c']);
 });
 
 test('sendTo', () => {
@@ -88,8 +106,8 @@ test('sendTo', () => {
   expect(bot.sendMessage).toHaveBeenCalledTimes(3);
 });
 
-test('sendToList', () => {
-  expect(sendToList('variable', 'message')).rejects.toThrowError();
+test('sendToGroup', () => {
+  expect(sendToGroup('group', 'message')).rejects.toThrowError();
 
   expect(bot.sendMessage).toHaveBeenCalledWith('11111', 'message', { parse_mode: undefined });
   expect(bot.sendMessage).toHaveBeenCalledWith('22222', 'message', { parse_mode: undefined });
@@ -97,11 +115,19 @@ test('sendToList', () => {
   expect(bot.sendMessage).toHaveBeenCalledTimes(5);
 });
 
-test('sendToAdmins', () => {
-  expect(sendToAdmins('message')).rejects.toThrowError();
+test('sendError', () => {
+  expect(sendError('Error')).rejects.toThrowError();
 
-  expect(bot.sendMessage).toHaveBeenCalledWith('12345', 'message', { parse_mode: undefined });
-  expect(bot.sendMessage).toHaveBeenCalledWith('54321', 'message', { parse_mode: undefined });
+  expect(bot.sendMessage).toHaveBeenCalledWith('33333', 'Error', { parse_mode: undefined });
 
-  expect(bot.sendMessage).toHaveBeenCalledTimes(7);
+  expect(bot.sendMessage).toHaveBeenCalledTimes(6);
+});
+
+test('groupToUserInfo', () => {
+  expect(groupToUserInfo('group')).rejects.toThrowError();
+
+  expect(bot.getChat).toHaveBeenCalledWith('11111');
+  expect(bot.getChat).toHaveBeenCalledWith('22222');
+
+  expect(bot.getChat).toHaveBeenCalledTimes(2);
 });
