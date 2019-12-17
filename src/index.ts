@@ -47,7 +47,6 @@ let ls: LocalStorage;
 
 const startTime = new Date();
 let commands: IBotHelperCommand[] = [];
-let groups: string[] = [];
 let errorGroup: string = '';
 let uVars: string[] = [];
 let gVars: string[] = [];
@@ -136,7 +135,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   });
 
   console.log(
-    `Telegram bot initialized with ${commands.length} commands, ${groups.length} groups, ${gVars.length} global variables and ${uVars.length} user variables.`,
+    `Telegram bot initialized with ${commands.length} commands, ${gVars.length} global variables and ${uVars.length} user variables.`,
   );
 
   return bot;
