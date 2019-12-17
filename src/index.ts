@@ -363,7 +363,7 @@ export const defaultCommandAdmin = (groupName: string) => {
     } else {
       sendToGroup(
         groupName,
-        `<b>Message from user:</b>\n - ` + msgInfoToString(msg).join(" - ") + `\n - Text: ${msg.text}`,
+        `<b>Message from user:</b>\n - ` + msgInfoToString(msg).join("\n - ") + `\n - Text: ${msg.text}`,
         "HTML"
       );
     }
