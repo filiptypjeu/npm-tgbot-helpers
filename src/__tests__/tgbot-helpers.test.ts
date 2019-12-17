@@ -21,7 +21,7 @@ initBot({
   localStoragePath: './src/__tests__/variables/',
   globalVariables: ['testVariable'],
   userVariables: ['var1', 'var2'],
-  errorGroup: "errorgroup"
+  errorGroup: 'errorgroup',
 });
 
 const props = properties();
