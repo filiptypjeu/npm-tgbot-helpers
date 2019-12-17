@@ -8,9 +8,9 @@ import readLastLines from "read-last-lines";
  * @todo
  * - Command allowed for multiple groups?
  * - Pre-defined commands (/init, /ip, /commands, /help etc.)
- * - Add suppoert for command@BotName
+ * - Add support for command@BotName
  * - Re-add groups variable for group existense checks
- * - Several commands
+ * - Default method for logs
  */
 
 export interface IBotHelperInit {
@@ -354,7 +354,7 @@ export const defaultCommandVar = async (msg: TelegramBot.Message) => {
 export const defaultCommandAdmin = (groupName: string) => {
   return (msg: TelegramBot.Message) => {
     if (getArguments(msg.text)[0] === undefined) {
-      sendTo(msg.chat.id, `Use "/admin your message here" to send a message to the administrator.`);
+      sendTo(msg.chat.id, `Use "/admin your message here" to send a message to the administrator(s).`);
     } else {
       sendToGroup(
         groupName,
