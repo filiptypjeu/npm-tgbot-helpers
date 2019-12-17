@@ -22,6 +22,7 @@ export interface IBotHelperInit {
   commands?: IBotHelperCommand[];
   errorGroup?: string;
   commandLogPath?: string;
+  whenOnline?: () => void;
 }
 
 export interface IBotHelperProps {
@@ -138,6 +139,10 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   console.log(
     `Telegram bot initialized with ${commands.length} commands, ${gVars.length} global variables and ${uVars.length} user variables.`
   );
+
+  if (initWith.whenOnline) {
+    initWith.whenOnline();
+  }
 
   return bot;
 };
