@@ -10,6 +10,7 @@ import readLastLines from "read-last-lines";
  * - Add support for command@BotName
  * - Re-add groups variable for group existense checks
  * - Default method for logs
+ * - Fix "hide"
  */
 
 export interface IBotHelperInit {
