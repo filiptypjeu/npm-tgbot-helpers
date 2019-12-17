@@ -7,7 +7,6 @@ import readLastLines from "read-last-lines";
 /**
  * @todo
  * - Command allowed for multiple groups?
- * - Pre-defined commands (/init, /ip, /commands, /help etc.)
  * - Add support for command@BotName
  * - Re-add groups variable for group existense checks
  * - Default method for logs
