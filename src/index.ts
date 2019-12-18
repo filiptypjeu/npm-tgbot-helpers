@@ -120,9 +120,9 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
 
       console.log(`User ${msg.from!.id} used command /${c.command}.`);
 
-      if (isInGroup(deactivatedCommands, `/${c}`)) {
+      if (!isInGroup(errorGroup, msg.chat.id) && isInGroup(deactivatedCommands, `/${c}`)) {
         sendTo(msg.chat.id, "This command has been deactivated.");
-        console.log(`Command deactivated.`);
+        console.log(`Command is deactivated.`);
         return;
       }
 
