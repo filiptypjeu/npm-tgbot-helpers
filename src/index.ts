@@ -47,6 +47,7 @@ let bot: TelegramBot;
 let ls: LocalStorage;
 
 const startTime = new Date();
+const deactivatedCommands: string = "TGBOT_deactivatedcommands";
 let commands: IBotHelperCommand[] = [];
 let errorGroup: string = "";
 let uVars: string[] = [];
@@ -118,6 +119,12 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
       });
 
       console.log(`User ${msg.from!.id} used command /${c.command}.`);
+
+      if (isInGroup(deactivatedCommands, `/${c}`)) {
+        sendTo(msg.chat.id, "This command has been deactivated.");
+        console.log(`Command deactivated.`);
+        return;
+      }
 
       if (c.group && !isInGroup(c.group, msg.chat.id)) {
         console.log(`User not in group ${c.group}.`);
@@ -386,3 +393,23 @@ export const defaultCommandInit = (groupName: string) => {
     }
   };
 };
+
+export const defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
+  const arg = getArguments(msg.text)[0];
+  const deactivated = variableToList(deactivatedCommands);
+  let s = "";
+
+  if (!arg) {
+    s = "<b>Deactivated commands:</b>\n" + deactivated.map((v, i) => `${i} ${v}`).join("\n");
+  } else if (Number(arg) < deactivated.length) {
+    toggleUserIdInGroup(deactivatedCommands, deactivated[Number(arg)]);
+    s = `Command ${deactivated[Number(arg)]} has been reactivated!`;
+  } else if (arg.indexOf("/") !== 0) {
+    s = `Number not correct, or command not starting with '/'.`;
+  } else {
+    toggleUserIdInGroup(deactivatedCommands, arg);
+    s = `Command ${arg} has been deactivated!`;
+  }
+  
+  return sendTo(msg.chat.id, s);
+}
