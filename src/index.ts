@@ -377,7 +377,7 @@ export const defaultCommandAdmin = (groupName: string) => {
   };
 };
 
-export const defaultCommandLog = async (logPath: string) => {
+export const defaultCommandLog = (logPath: string) => {
   return async (msg: TelegramBot.Message) => {
     return readLastLines
       .read(logPath, Number(getArguments(msg.text)[0]) < 50 ? Number(getArguments(msg.text)[0]) : 50)
