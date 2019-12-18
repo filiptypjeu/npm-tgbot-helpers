@@ -383,7 +383,7 @@ export const defaultCommandLog = async (logPath: string) => {
       .read(logPath, Number(getArguments(msg.text)[0]) < 50 ? Number(getArguments(msg.text)[0]) : 50)
       .then(s => sendTo(msg.chat.id, s ? s : `File ${logPath} is empty.`))
       .catch(e => sendError(e));
-  }
+  };
 };
 
 export const defaultCommandInit = (groupToInitTo: string) => {
@@ -411,6 +411,6 @@ export const defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
     toggleUserIdInGroup(deactivatedCommands, arg);
     s = `Command ${arg} has been deactivated!`;
   }
-  
+
   return sendTo(msg.chat.id, s);
-}
+};
