@@ -127,6 +127,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
       }
 
       if (c.group && !isInGroup(c.group, msg.chat.id)) {
+        sendTo(msg.chat.id, "You dont have access to this command.");
         console.log(`User not in group ${c.group}.`);
         return;
       }
@@ -385,11 +386,11 @@ export const defaultCommandLog = async (logPath: string) => {
   }
 };
 
-export const defaultCommandInit = (groupName: string) => {
+export const defaultCommandInit = (groupToInitTo: string) => {
   return (msg: TelegramBot.Message) => {
-    const userIds = variableToList(groupName);
+    const userIds = variableToList(groupToInitTo);
     if (!userIds.length) {
-      toggleUserIdInGroup(groupName, msg.chat.id);
+      toggleUserIdInGroup(groupToInitTo, msg.chat.id);
     }
   };
 };
