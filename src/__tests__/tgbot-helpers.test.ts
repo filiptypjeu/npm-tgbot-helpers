@@ -14,6 +14,7 @@ import {
   isInGroup,
   sendError,
   groupToUserInfo,
+  userVariable,
 } from "../index";
 
 initBot({
@@ -46,6 +47,11 @@ test("variable", () => {
 
   variable("v3", "string");
   expect(variable("v3")).toEqual("string");
+});
+
+test("userVariable", () => {
+  expect(userVariable("test", "12345")).toEqual("test_12345");
+  expect(userVariable("test", 54321)).toEqual("test_54321");
 });
 
 test("variableToNumber", () => {

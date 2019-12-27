@@ -236,6 +236,10 @@ export const variableToList = (variableName: string): string[] => {
   return s ? s.trim().split("\n") : [];
 };
 
+export const userVariable = (variableName: string, userId: string | number) => {
+  return variableName + "_" + userId;
+};
+
 export const groupToUserInfo = async (variableName: string, extraInfo?: string[]) => {
   const userIds = variableToList(variableName);
 
