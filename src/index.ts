@@ -80,9 +80,16 @@ const getDurationString = (value: number | Date) => {
   }`;
 };
 
+/**
+ * Orders the commnads by the grupup that can use them.
+ *
+ * @param {IBotHelperCommand} cmds Commands to order.
+ *
+ * @returns A Map<string, IBotHelperCommand> that maps group name to commands.
+ */
 const groupByGroup = (cmds: IBotHelperCommand[]) => {
   const m = new Map<string, IBotHelperCommand[]>();
-  commands.forEach(cmd => {
+  cmds.forEach(cmd => {
     const g = cmd.group || "";
     m.set(g, (m.get(g) || []).concat(cmd));
   });
@@ -90,6 +97,11 @@ const groupByGroup = (cmds: IBotHelperCommand[]) => {
   return m;
 };
 
+/**
+ * Initializes a Telegram Bot.
+ *
+ * @param {IBotHelperInit} initWith Parameters to initialize the bot with.
+ */
 export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   bot = new TelegramBot(initWith.telegramBotToken, { polling: true });
   ls = new LocalStorage(initWith.localStoragePath);
@@ -154,6 +166,9 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   return bot;
 };
 
+/**
+ * Returns some Telegram Bot properties.
+ */
 export const properties = (): IBotHelperProps => {
   const p: IBotHelperProps = {
     commands,
@@ -233,7 +248,14 @@ export const variableToBool = (variableName: string): boolean => {
 
 export const variableToList = (variableName: string): string[] => {
   const s = variable(variableName);
-  return s ? s.trim().split("\n") : [];
+  return s
+    ? s
+        .trim()
+        .split(" ")
+        .join("\n")
+        .split("\n")
+        .filter(v => v)
+    : [];
 };
 
 export const userVariable = (variableName: string, userId: string | number) => {
@@ -356,7 +378,13 @@ export const defaultCommandVar = async (msg: TelegramBot.Message) => {
   } else if (!args[1]) {
     return sendTo(msg.chat.id, "Please provide two arguments.");
   } else if (Number(args[0]) >= 0 && Number(args[0]) < gVars.length) {
-    variable(gVars[Number(args[0])], args[1]);
+    variable(
+      gVars[Number(args[0])],
+      args
+        .slice(1)
+        .join(" ")
+        .trim()
+    );
     return sendTo(
       msg.chat.id,
       `Global variable set: <b>${gVars[Number(args[0])]} = ${variable(gVars[Number(args[0])])}</b>`,
