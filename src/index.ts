@@ -280,6 +280,15 @@ export const groupToUserInfo = async (variableName: string, extraInfo?: string[]
   }
 };
 
+export const addUserIdToGroup = (groupName: string, userId: number | string) => {
+  const userIds = variableToList(groupName);
+
+  if (!userIds.includes(userId.toString())) {
+    userIds.push(userId.toString());
+    variable(groupName, userIds.join("\n"));
+  }
+};
+
 export const toggleUserIdInGroup = (groupName: string, userId: number | string) => {
   const userIds = variableToList(groupName);
 

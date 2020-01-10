@@ -5,6 +5,7 @@ import {
   initBot,
   sendTo,
   toggleUserIdInGroup,
+  addUserIdToGroup,
   variableToBool,
   variableToNumber,
   variableToList,
@@ -77,6 +78,15 @@ test("toggleUserIdInGroup", () => {
   expect(toggleUserIdInGroup("group", 1)).toEqual(true);
   expect(toggleUserIdInGroup("group", 1)).toEqual(false);
   expect(toggleUserIdInGroup("errorgroup", 33333)).toEqual(true);
+});
+
+test("addUserIdToGroup", () => {
+  variable("newgroup", "");
+  addUserIdToGroup("newgroup", 11111);
+  addUserIdToGroup("newgroup", 22222);
+  expect(isInGroup("newgroup", 11111)).toEqual(true);
+  expect(isInGroup("newgroup", 22222)).toEqual(true);
+  expect(isInGroup("newgroup", 33333)).toEqual(false);
 });
 
 test("variableToList", () => {
