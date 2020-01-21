@@ -338,7 +338,7 @@ export const defaultCommandCommands = (msg: TelegramBot.Message) => {
         msg.chat.id,
         `<b>Commands accessible to ${group ? `group ${group}` : "everybody"}:</b>\n` +
           cmds
-            .map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}`)
+            .map(cmd => `${cmd.hide ? "(" : ""}/${cmd.command}${cmd.privateOnly ? "*" : ""}${cmd.hide ? ")" : ""}`)
             .sort()
             .join("\n"),
         "HTML"
