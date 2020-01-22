@@ -497,5 +497,53 @@ export const defaultCommandToggle = (requestFor: string, response: string) => {
     }
 
     sendTo(msg.chat.id, `Chat ${userId} has been removed from group ${requestFor}.`);
+
+export const defaultCommandStart = (
+  response: string,
+  addToGroup: string,
+  alertGroup: string,
+  alertMessage?: string
+) => {
+  return (msg: TelegramBot.Message) => {
+    sendTo(msg.chat.id, response, "HTML");
+    if (addUserIdToGroup(addToGroup, msg.chat.id)) {
+      const message = alertMessage ? alertMessage : `<b>Chat $CHATID has used the start command!</b>\n$INFO`;
+
+      sendToGroup(
+        alertGroup,
+        message
+          .split("$CHATID")
+          .join(msg.chat.id.toString())
+          .split("$INFO")
+          .join(
+            msgInfoToString(msg)
+              .map(s => " - " + s)
+              .join("\n")
+          ),
+        "HTML"
+      );
+    }
+  };
+};
+
+export const defaultCommandGroups = (groups: string[]) => {
+  return (msg: TelegramBot.Message) => {
+    const n = Number(getArguments(msg.text)[0]);
+
+    if (n >= 0 && n < groups.length) {
+      const groupName = groups[n];
+      groupToUserInfo(groupName)
+        .then(a => {
+          const message =
+            a.length === 0
+              ? `No chats in group <i>${groupName}</i>.`
+              : `<b>Chats in group <i>${groupName}</i></b>:\n${a.map(s => ` - ${s}`).join("\n")}`;
+          sendTo(msg.chat.id, message, "HTML");
+        })
+        .catch(e => sendError(e));
+
+    } else {
+      sendTo(msg.chat.id, groups.length > 0 ? `<b>Available groups</b>:\n${groups.map((g, i) => `${i} ${g}`).join("\n")}` : "No groups available...");
+    }
   };
 };
