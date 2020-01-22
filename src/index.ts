@@ -341,7 +341,7 @@ export const defaultCommandCommands = (msg: TelegramBot.Message) => {
     if (!group || isInGroup(group, msg.chat.id)) {
       sendTo(
         msg.chat.id,
-        `<b>Commands accessible to ${group ? `group ${group}` : "everybody"}:</b>\n` +
+        `<b>Commands accessible to ${group ? `group <i>${group}</i>` : "everybody"}:</b>\n` +
           cmds
             .map(cmd => `${cmd.hide ? "(" : ""}/${cmd.command}${cmd.privateOnly ? "*" : ""}${cmd.hide ? ")" : ""}`)
             .sort()
@@ -414,7 +414,7 @@ export const defaultCommandVar = async (msg: TelegramBot.Message) => {
 export const defaultCommandAdmin = (groupName: string) => {
   return (msg: TelegramBot.Message) => {
     if (getArguments(msg.text)[0] === undefined) {
-      sendTo(msg.chat.id, `Use "/admin your message here" to send a message to the administrator(s).`);
+      sendTo(msg.chat.id, `Use "${msg.text} your message here" to send a message to the administrator(s).`);
     } else {
       sendToGroup(
         groupName,
@@ -438,7 +438,11 @@ export const defaultCommandInit = (groupToInitTo: string) => {
   return (msg: TelegramBot.Message) => {
     const userIds = variableToList(groupToInitTo);
     if (!userIds.length) {
-      toggleUserIdInGroup(groupToInitTo, msg.chat.id);
+      if (toggleUserIdInGroup(groupToInitTo, msg.chat.id)) {
+        sendTo(msg.chat.id, `You have been added to group <i>${groupToInitTo}</i>!`, "HTML");
+      }
+    } else {
+      sendTo(msg.chat.id, "No, I don't think so.");
     }
   };
 };
@@ -473,7 +477,7 @@ export const defaultCommandRequest = (
     sendTo(msg.chat.id, response);
     sendToGroup(
       sendRequestTo,
-      `<b>Request for group ${requestFor}:</b>\n - ` +
+      `<b>Request for group <i>${requestFor}</i>:</b>\n - ` +
         msgInfoToString(msg).join("\n - ") +
         `\n - Is in group: ${isInGroup(requestFor, msg.chat.id)}\n` +
         `/${toggleCommand}_${msg.chat.id}`,
@@ -486,17 +490,23 @@ export const defaultCommandToggle = (requestFor: string, response: string) => {
   return (msg: TelegramBot.Message) => {
     const userId = msg.text!.split(" ")[0].split("_")[1];
     if (!userId) {
-      sendTo(msg.chat.id, `ID ${userId} not found...`);
+      sendTo(
+        msg.chat.id,
+        `Use ${msg.text!.split(" ")[0].split("_")[0]}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`,
+        "HTML"
+      );
       return;
     }
 
     if (toggleUserIdInGroup(requestFor, userId)) {
-      sendTo(msg.chat.id, `Chat ${userId} has been added to group ${requestFor}.`);
+      sendTo(msg.chat.id, `Chat ${userId} has been added to group <i>${requestFor}</i>.`, "HTML");
       sendTo(userId, response);
       return;
     }
 
-    sendTo(msg.chat.id, `Chat ${userId} has been removed from group ${requestFor}.`);
+    sendTo(msg.chat.id, `Chat ${userId} has been removed from group <i>${requestFor}</i>.`, "HTML");
+  };
+};
 
 export const defaultCommandStart = (
   response: string,
