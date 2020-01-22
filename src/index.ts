@@ -551,9 +551,13 @@ export const defaultCommandGroups = (groups: string[]) => {
           sendTo(msg.chat.id, message, "HTML");
         })
         .catch(e => sendError(e));
-
     } else {
-      sendTo(msg.chat.id, groups.length > 0 ? `<b>Available groups</b>:\n${groups.map((g, i) => `${i} ${g}`).join("\n")}` : "No groups available...");
+      sendTo(
+        msg.chat.id,
+        groups.length > 0
+          ? `<b>Available groups</b>:\n${groups.map((g, i) => `${i} ${g}`).join("\n")}`
+          : "No groups available..."
+      );
     }
   };
 };
