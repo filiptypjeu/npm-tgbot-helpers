@@ -1,6 +1,6 @@
 {
     "name": "tgbot-helpers",
-    "version": "1.6.2",
+    "version": "1.7.0",
     "description": "NPM package with a few helper methods for node-telegram-bot-api TelegramBots.",
     "main": "dist/index.js",
     "scripts": {
