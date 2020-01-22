@@ -457,3 +457,40 @@ export const defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
 
   return sendTo(msg.chat.id, s);
 };
+
+export const defaultCommandRequest = (
+  requestFor: string,
+  sendRequestTo: string,
+  response: string,
+  toggleCommand: string
+) => {
+  return (msg: TelegramBot.Message) => {
+    sendTo(msg.chat.id, response);
+    sendToGroup(
+      sendRequestTo,
+      `<b>Request for group ${requestFor}:</b>\n - ` +
+        msgInfoToString(msg).join("\n - ") +
+        `\n - Is in group: ${isInGroup(requestFor, msg.chat.id)}\n` +
+        `/${toggleCommand}_${msg.chat.id}`,
+      "HTML"
+    );
+  };
+};
+
+export const defaultCommandToggle = (requestFor: string, response: string) => {
+  return (msg: TelegramBot.Message) => {
+    const userId = msg.text!.split(" ")[0].split("_")[1];
+    if (!userId) {
+      sendTo(msg.chat.id, `ID ${userId} not found...`);
+      return;
+    }
+
+    if (toggleUserIdInGroup(requestFor, userId)) {
+      sendTo(msg.chat.id, `Chat ${userId} has been added to group ${requestFor}.`);
+      sendTo(userId, response);
+      return;
+    }
+
+    sendTo(msg.chat.id, `Chat ${userId} has been removed from group ${requestFor}.`);
+  };
+};
