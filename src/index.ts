@@ -212,7 +212,7 @@ export const isInGroup = (groupName: string, userId: number | string) => {
   return variableToList(groupName).includes(userId.toString());
 };
 
-export const sendTo = async (userId: number | string, text: string, parseMode?: ParseMode) => {
+export const sendTo = async (userId: number | string, text: string, parseMode: ParseMode = "HTML") => {
   bot.sendMessage(userId, text, { parse_mode: parseMode }).catch(e => {
     if (e.code === "ETELEGRAM") {
       sendError(
