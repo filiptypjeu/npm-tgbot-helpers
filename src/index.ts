@@ -40,6 +40,8 @@ export interface IBotHelperCommand {
   matchBeginningOnly?: boolean;
   hide?: boolean;
   description?: string;
+  chatAcion?: TelegramBot.ChatAction;
+  accessDeniedMessage?: string;
   callback: (msg: Message) => void;
 }
 
@@ -139,7 +141,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
       }
 
       if (c.group && !isInGroup(c.group, msg.chat.id)) {
-        sendTo(msg.chat.id, "You dont have access to this command.");
+        sendTo(msg.chat.id, c.accessDeniedMessage ? c.accessDeniedMessage : "You dont have access to this command.");
         console.log(`User not in group ${c.group}.`);
         return;
       }
@@ -151,6 +153,9 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
       }
 
       console.log("Callback called.");
+      if (c.chatAcion) {
+        bot.sendChatAction(msg.chat.id, c.chatAcion);
+      }
       return c.callback(msg);
     });
   });
