@@ -21,6 +21,8 @@ export interface IBotHelperInit {
   commands?: IBotHelperCommand[];
   errorGroup?: string;
   commandLogPath?: string;
+  defaultAccessDeniedMessage?: string;
+  defaultPrivateOnlyMessage?: string;
   whenOnline?: () => void;
 }
 
@@ -141,13 +143,13 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
       }
 
       if (c.group && !isInGroup(c.group, msg.chat.id)) {
-        sendTo(msg.chat.id, c.accessDeniedMessage ? c.accessDeniedMessage : "You dont have access to this command.");
+        sendTo(msg.chat.id, c.accessDeniedMessage ? c.accessDeniedMessage : (initWith.defaultAccessDeniedMessage ? initWith.defaultAccessDeniedMessage : "You dont have access to this command."));
         console.log(`User not in group ${c.group}.`);
         return;
       }
 
       if (c.privateOnly && msg.chat.type !== "private") {
-        sendTo(msg.chat.id, "The command can only be used in a private chat.");
+        sendTo(msg.chat.id, initWith.defaultPrivateOnlyMessage ? initWith.defaultPrivateOnlyMessage : "The command can only be used in a private chat.");
         console.log(`Not in private chat.`);
         return;
       }
