@@ -413,10 +413,10 @@ export const defaultCommandVar = async (msg: TelegramBot.Message) => {
   }
 };
 
-export const defaultCommandAdmin = (groupName: string) => {
+export const defaultCommandAdmin = (groupName: string, emptyResponse?: string) => {
   return (msg: TelegramBot.Message) => {
     if (getArguments(msg.text)[0] === undefined) {
-      sendTo(msg.chat.id, `Use "${msg.text} your message here" to send a message to the administrator(s).`);
+      sendTo(msg.chat.id, emptyResponse ? emptyResponse : `Use "${msg.text} your message here" to send a message to the administrator(s).`);
     } else {
       sendToGroup(
         groupName,
