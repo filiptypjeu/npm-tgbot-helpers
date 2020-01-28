@@ -79,9 +79,7 @@ const getDurationString = (value: number | Date) => {
   const m = Math.floor((v - d * 3600000 * 24 - h * 3600000) / 60000);
   const s = Math.floor((v - d * 3600000 * 24 - h * 3600000 - m * 60000) / 1000);
 
-  return `${d} day${d === 1 ? "" : "s"} ${h} hour${h === 1 ? "" : "s"} ${m} minute${m === 1 ? "" : "s"} ${s} second${
-    s === 1 ? "" : "s"
-  }`;
+  return `${d} day${d === 1 ? "" : "s"} ${h} hour${h === 1 ? "" : "s"} ${m} minute${m === 1 ? "" : "s"} ${s} second${s === 1 ? "" : "s"}`;
 };
 
 /**
@@ -158,9 +156,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
       if (c.privateOnly && msg.chat.type !== "private") {
         sendTo(
           msg.chat.id,
-          initWith.defaultPrivateOnlyMessage
-            ? initWith.defaultPrivateOnlyMessage
-            : "The command can only be used in a private chat."
+          initWith.defaultPrivateOnlyMessage ? initWith.defaultPrivateOnlyMessage : "The command can only be used in a private chat."
         );
         console.log(`Not in private chat.`);
         return;
@@ -371,12 +367,7 @@ export const defaultCommandHelp = async (msg: TelegramBot.Message) => {
     msg.chat.id,
     commands
       .filter(cmd => (cmd.group ? isInGroup(cmd.group, msg.chat.id) : !cmd.hide))
-      .map(
-        cmd =>
-          `/${cmd.command}${cmd.privateOnly ? "*" : ""}:  ${
-            cmd.description ? cmd.description : "No description available."
-          }`
-      )
+      .map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}:  ${cmd.description ? cmd.description : "No description available."}`)
       .sort()
       .join("\n\n"),
     "HTML"
@@ -415,11 +406,7 @@ export const defaultCommandVar = async (msg: TelegramBot.Message) => {
         .join(" ")
         .trim()
     );
-    return sendTo(
-      msg.chat.id,
-      `Global variable set: <b>${gVars[Number(args[0])]} = ${variable(gVars[Number(args[0])])}</b>`,
-      "HTML"
-    );
+    return sendTo(msg.chat.id, `Global variable set: <b>${gVars[Number(args[0])]} = ${variable(gVars[Number(args[0])])}</b>`, "HTML");
   } else {
     return sendTo(msg.chat.id, `Global variable ${args[0]} does not exist.`);
   }
@@ -428,16 +415,9 @@ export const defaultCommandVar = async (msg: TelegramBot.Message) => {
 export const defaultCommandAdmin = (groupName: string, emptyResponse?: string) => {
   return (msg: TelegramBot.Message) => {
     if (getArguments(msg.text)[0] === undefined) {
-      sendTo(
-        msg.chat.id,
-        emptyResponse ? emptyResponse : `Use "${msg.text} your message here" to send a message to the administrator(s).`
-      );
+      sendTo(msg.chat.id, emptyResponse ? emptyResponse : `Use "${msg.text} your message here" to send a message to the administrator(s).`);
     } else {
-      sendToGroup(
-        groupName,
-        `<b>Message from user:</b>\n - ` + msgInfoToString(msg).join("\n - ") + `\n - Text: ${msg.text}`,
-        "HTML"
-      );
+      sendToGroup(groupName, `<b>Message from user:</b>\n - ` + msgInfoToString(msg).join("\n - ") + `\n - Text: ${msg.text}`, "HTML");
     }
   };
 };
@@ -484,12 +464,7 @@ export const defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
   return sendTo(msg.chat.id, s);
 };
 
-export const defaultCommandRequest = (
-  requestFor: string,
-  sendRequestTo: string,
-  response: string,
-  toggleCommand: string
-) => {
+export const defaultCommandRequest = (requestFor: string, sendRequestTo: string, response: string, toggleCommand: string) => {
   return (msg: TelegramBot.Message) => {
     sendTo(msg.chat.id, response);
     sendToGroup(
@@ -507,11 +482,7 @@ export const defaultCommandToggle = (requestFor: string, response: string) => {
   return (msg: TelegramBot.Message) => {
     const userId = msg.text!.split(" ")[0].split("_")[1];
     if (!userId) {
-      sendTo(
-        msg.chat.id,
-        `Use ${msg.text!.split(" ")[0].split("_")[0]}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`,
-        "HTML"
-      );
+      sendTo(msg.chat.id, `Use ${msg.text!.split(" ")[0].split("_")[0]}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`, "HTML");
       return;
     }
 
@@ -525,12 +496,7 @@ export const defaultCommandToggle = (requestFor: string, response: string) => {
   };
 };
 
-export const defaultCommandStart = (
-  response: string,
-  addToGroup: string,
-  alertGroup: string,
-  alertMessage?: string
-) => {
+export const defaultCommandStart = (response: string, addToGroup: string, alertGroup: string, alertMessage?: string) => {
   return (msg: TelegramBot.Message) => {
     sendTo(msg.chat.id, response, "HTML");
     if (addUserIdToGroup(addToGroup, msg.chat.id)) {
@@ -571,9 +537,7 @@ export const defaultCommandGroups = (groups: string[]) => {
     } else {
       sendTo(
         msg.chat.id,
-        groups.length > 0
-          ? `<b>Available groups</b>:\n${groups.map((g, i) => `${i} ${g}`).join("\n")}`
-          : "No groups available..."
+        groups.length > 0 ? `<b>Available groups</b>:\n${groups.map((g, i) => `${i} ${g}`).join("\n")}` : "No groups available..."
       );
     }
   };
