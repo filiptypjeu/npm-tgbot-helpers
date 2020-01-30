@@ -252,7 +252,7 @@ export function variable(variableName: string, value?: string | number) {
     return s ? s : "";
   }
   return ls.setItem(variableName, value.toString());
-};
+}
 
 export const variableToNumber = (variableName: string, defaultValue: number = 0): number => {
   const s = ls.getItem(variableName);
