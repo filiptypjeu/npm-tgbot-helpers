@@ -244,7 +244,9 @@ export const sendError = async (e: any) => {
   return sendToGroup(errorGroup, e.toString() ? e.toString().slice(0, 3000) : "Error...");
 };
 
-export const variable = (variableName: string, value?: string | number) => {
+export function variable(variableName: string): string;
+export function variable(variableName: string, value: string | number): void;
+export function variable(variableName: string, value?: string | number) {
   if (value === undefined) {
     const s = ls.getItem(variableName);
     return s ? s : "";
