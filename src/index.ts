@@ -275,6 +275,22 @@ export const variableToList = (variableName: string): string[] => {
     : [];
 };
 
+export function variableToObject(variableName: string): object;
+export function variableToObject(variableName: string, property: string, value?: any): void;
+export function variableToObject(variableName: string, property?: string, value?: any) {
+  const object = JSON.parse(variable(variableName) || "{}");
+  if (!property) {
+    return object;
+  }
+  if (value === undefined) {
+    delete object[property];
+  } else {
+    object[property] = value;
+  }
+  variable(variableName, JSON.stringify(object));
+  return;
+}
+
 export const userVariable = (variableName: string, userId: string | number) => {
   return variableName + "_" + userId;
 };

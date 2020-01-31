@@ -9,6 +9,7 @@ import {
   variableToBool,
   variableToNumber,
   variableToList,
+  variableToObject,
   variable,
   sendToGroup,
   getArguments,
@@ -93,6 +94,29 @@ test("variableToList", () => {
   expect(variableToList("group")).toEqual(["11111", "22222"]);
   expect(variableToList("errorgroup")).toEqual(["33333"]);
   expect(variableToList("notagroup")).toEqual([]);
+});
+
+test("variableToObject", () => {
+  variable("obj", "");
+  expect(variableToObject("obj")).toEqual({});
+
+  variableToObject("obj", "num", 5);
+  expect(variableToObject("obj")).toEqual({ num: 5 });
+
+  variableToObject("obj", "stringg", "246");
+  expect(variableToObject("obj")).toEqual({ num: 5, stringg: "246" });
+
+  variableToObject("obj", "anotherObject", { value: 7.4 });
+  expect(variableToObject("obj")).toEqual({ num: 5, stringg: "246", anotherObject: { value: 7.4 } });
+
+  variableToObject("obj", "num");
+  expect(variableToObject("obj")).toEqual({ stringg: "246", anotherObject: { value: 7.4 } });
+
+  variableToObject("obj", "num");
+  expect(variableToObject("obj")).toEqual({ stringg: "246", anotherObject: { value: 7.4 } });
+
+  variableToObject("obj", "anotherObject", "123");
+  expect(variableToObject("obj")).toEqual({ stringg: "246", anotherObject: "123" });
 });
 
 test("isInGroup", () => {
