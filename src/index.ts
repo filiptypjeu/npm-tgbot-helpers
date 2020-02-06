@@ -248,8 +248,7 @@ export function variable(variableName: string): string;
 export function variable(variableName: string, value: string | number): void;
 export function variable(variableName: string, value?: string | number) {
   if (value === undefined) {
-    const s = ls.getItem(variableName);
-    return s ? s : "";
+    return ls.getItem(variableName) || "";
   }
   return ls.setItem(variableName, value.toString());
 }
