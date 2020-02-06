@@ -135,10 +135,10 @@ test("getArguments", () => {
 
 test("sendTo", () => {
   expect(sendTo(123, "message")).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenCalledWith(123, "message", { parse_mode: "HTML" });
+  expect(bot.sendMessage).toHaveBeenCalledWith(123, "message", { parse_mode: undefined });
 
   expect(sendTo(123, "message", "HTML")).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenCalledWith(123, "message", { parse_mode: "HTML" });
+  expect(bot.sendMessage).toHaveBeenCalledWith(123, "message", { parse_mode: undefined });
 
   expect(sendTo(123, "message", "Markdown")).rejects.toThrowError();
   expect(bot.sendMessage).toHaveBeenCalledWith(123, "message", { parse_mode: "Markdown" });
@@ -149,8 +149,8 @@ test("sendTo", () => {
 test("sendToGroup", () => {
   expect(sendToGroup("group", "message")).rejects.toThrowError();
 
-  expect(bot.sendMessage).toHaveBeenCalledWith("11111", "message", { parse_mode: "HTML" });
-  expect(bot.sendMessage).toHaveBeenCalledWith("22222", "message", { parse_mode: "HTML" });
+  expect(bot.sendMessage).toHaveBeenCalledWith("11111", "message", { parse_mode: undefined });
+  expect(bot.sendMessage).toHaveBeenCalledWith("22222", "message", { parse_mode: undefined });
 
   expect(bot.sendMessage).toHaveBeenCalledTimes(5);
 });
@@ -158,7 +158,7 @@ test("sendToGroup", () => {
 test("sendError", () => {
   expect(sendError("Error")).rejects.toThrowError();
 
-  expect(bot.sendMessage).toHaveBeenCalledWith("33333", "Error", { parse_mode: "HTML" });
+  expect(bot.sendMessage).toHaveBeenCalledWith("33333", "Error", { parse_mode: undefined });
 
   expect(bot.sendMessage).toHaveBeenCalledTimes(6);
 });
