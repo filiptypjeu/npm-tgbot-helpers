@@ -228,8 +228,20 @@ export const sendTo = async (userId: number | string, text: string, parseMode?: 
       if (e.response.body.description === "Bad Request: message is too long") {
         const splitText = text.split("\n");
         if (splitText.length > 1) {
-          await sendTo(userId, splitText.slice(0, Math.round(splitText.length/2)).join("\n").trim());
-          await sendTo(userId, splitText.slice(Math.round(splitText.length/2)).join("\n").trim());
+          await sendTo(
+            userId,
+            splitText
+              .slice(0, Math.round(splitText.length / 2))
+              .join("\n")
+              .trim()
+          );
+          await sendTo(
+            userId,
+            splitText
+              .slice(Math.round(splitText.length / 2))
+              .join("\n")
+              .trim()
+          );
         } else {
           sendError(`Message to userId ${userId} too long (${text.length} characters)...`);
         }
