@@ -19,6 +19,7 @@ export interface IBotHelperInit {
   globalVariables?: string[];
   userVariables?: string[];
   commands?: IBotHelperCommand[];
+  groups?: string[];
   errorGroup?: string;
   commandLogPath?: string;
   defaultAccessDeniedMessage?: string;
@@ -53,6 +54,7 @@ let ls: LocalStorage;
 const startTime = new Date();
 const deactivatedCommands: string = "TGBOT_deactivatedcommands";
 let commands: IBotHelperCommand[] = [];
+let groups: string[] = [];
 let errorGroup: string = "";
 let uVars: string[] = [];
 let gVars: string[] = [];
@@ -108,6 +110,9 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   bot = new TelegramBot(initWith.telegramBotToken, { polling: true });
   ls = new LocalStorage(initWith.localStoragePath);
 
+  if (initWith.groups) {
+    groups = initWith.groups;
+  }
   if (initWith.errorGroup) {
     errorGroup = initWith.errorGroup;
   }
@@ -171,7 +176,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   });
 
   console.log(
-    `Telegram bot initialized with ${commands.length} commands, ${gVars.length} global variables and ${uVars.length} user variables.`
+    `Telegram bot initialized with ${commands.length} commands, ${groupToUserInfo.length} groups, ${gVars.length} global variables and ${uVars.length} user variables.`
   );
 
   if (initWith.whenOnline) {
@@ -560,7 +565,7 @@ export const defaultCommandStart = (response: string, addToGroup: string, alertG
   };
 };
 
-export const defaultCommandGroups = (groups: string[]) => {
+export const defaultCommandGroups = () => {
   return (msg: TelegramBot.Message) => {
     const n = Number(getArguments(msg.text)[0]);
 
