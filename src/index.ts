@@ -233,14 +233,16 @@ export const sendTo = async (userId: number | string, text: string, parseMode?: 
             splitText
               .slice(0, Math.round(splitText.length / 2))
               .join("\n")
-              .trim()
+              .trim(),
+            parseMode
           );
           await sendTo(
             userId,
             splitText
               .slice(Math.round(splitText.length / 2))
               .join("\n")
-              .trim()
+              .trim(),
+            parseMode
           );
         } else {
           sendError(`Message to userId ${userId} too long (${text.length} characters)...`);
