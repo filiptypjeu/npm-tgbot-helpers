@@ -223,11 +223,21 @@ export const isInGroup = (groupName: string, userId: number | string) => {
 };
 
 export const sendTo = async (userId: number | string, text: string, parseMode?: ParseMode) => {
-  bot.sendMessage(userId, text, { parse_mode: parseMode }).catch(e => {
+  bot.sendMessage(userId, text, { parse_mode: parseMode }).catch(async e => {
     if (e.code === "ETELEGRAM") {
-      sendError(
-        `Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`
-      );
+      if (e.response.body.description === "Bad Request: message is too long") {
+        const splitText = text.split("\n");
+        if (splitText.length > 1) {
+          await sendTo(userId, splitText.slice(0, Math.round(splitText.length/2)).join("\n").trim());
+          await sendTo(userId, splitText.slice(Math.round(splitText.length/2)).join("\n").trim());
+        } else {
+          sendError(`Message to userId ${userId} too long (${text.length} characters)...`);
+        }
+      } else {
+        sendError(
+          `Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`
+        );
+      }
     } else {
       console.log(e.code);
       console.log(e.response.body);
