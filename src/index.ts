@@ -70,7 +70,7 @@ const commandRegExp = (c: IBotHelperCommand): RegExp => {
  *
  * @returns {string} the duration in a 'days hours minutes seconds' format.
  */
-const getDurationString = (value: number | Date) => {
+const getDurationString = (value: number | Date): string => {
   let v: number;
   if (typeof value === "number") {
     v = value;
@@ -416,7 +416,7 @@ export const defaultCommandHelp = async (msg: TelegramBot.Message) => {
     msg.chat.id,
     commands
       .filter(cmd => (cmd.group ? isInGroup(cmd.group, msg.chat.id) : !cmd.hide))
-      .map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}:  ${cmd.description ? cmd.description : "No description available."}`)
+      .map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}${cmd.description ? ":  " + cmd.description : ""}`)
       .sort()
       .join("\n\n"),
     "HTML"
