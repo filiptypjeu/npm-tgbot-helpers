@@ -3,6 +3,7 @@ import { LocalStorage } from "node-localstorage";
 import TelegramBot, { Message, ParseMode } from "node-telegram-bot-api";
 import os from "os";
 import readLastLines from "read-last-lines";
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * @todo
@@ -227,8 +228,8 @@ export const isInGroup = (groupName: string, userId: number | string) => {
   return variableToList(groupName).includes(userId.toString());
 };
 
-export const sendTo = async (userId: number | string, text: string, parseMode?: ParseMode) => {
-  bot.sendMessage(userId, text, { parse_mode: parseMode }).catch(async e => {
+export const sendTo = async (userId: number | string, text: string, parseMode?: ParseMode, silent: boolean = false) => {
+  bot.sendMessage(userId, parseMode === "HTML" ? sanitizeHtml(text, { allowedTags: [ 'b', 'i' ] }) : text, { parse_mode: parseMode, disable_notification: silent }).catch(async e => {
     if (e.code === "ETELEGRAM") {
       if (e.response.body.description === "Bad Request: message is too long") {
         const splitText = text.split("\n");
@@ -239,7 +240,8 @@ export const sendTo = async (userId: number | string, text: string, parseMode?: 
               .slice(0, Math.round(splitText.length / 2))
               .join("\n")
               .trim(),
-            parseMode
+            parseMode,
+            silent,
           );
           await sendTo(
             userId,
@@ -247,7 +249,8 @@ export const sendTo = async (userId: number | string, text: string, parseMode?: 
               .slice(Math.round(splitText.length / 2))
               .join("\n")
               .trim(),
-            parseMode
+            parseMode,
+            silent,
           );
         } else {
           sendError(`Message to userId ${userId} too long (${text.length} characters)...`);
@@ -264,8 +267,8 @@ export const sendTo = async (userId: number | string, text: string, parseMode?: 
   });
 };
 
-export const sendToGroup = async (groupName: string, text: string, parseMode?: ParseMode) => {
-  return Promise.all(variableToList(groupName).map(id => sendTo(id, text, parseMode)));
+export const sendToGroup = async (groupName: string, text: string, parseMode?: ParseMode, silent: boolean = false) => {
+  return Promise.all(variableToList(groupName).map(id => sendTo(id, text, parseMode, silent)));
 };
 
 export const sendError = async (e: any) => {
