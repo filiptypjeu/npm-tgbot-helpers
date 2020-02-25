@@ -586,7 +586,7 @@ export const defaultCommandGroups = () => {
     } else {
       sendTo(
         msg.chat.id,
-        groups.length > 0 ? `<b>Available groups</b>:\n${groups.map((g, i) => `${i} ${g}`).join("\n")}` : "No groups available..."
+        groups.length > 0 ? `<b>Available groups</b>:\n${groups.map((g, i) => `${i} ${g}`).join("\n")}` : "No groups available...", "HTML"
       );
     }
   };

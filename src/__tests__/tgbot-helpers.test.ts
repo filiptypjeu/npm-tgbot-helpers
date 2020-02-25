@@ -135,13 +135,13 @@ test("getArguments", () => {
 
 test("sendTo", () => {
   expect(sendTo(123, "message")).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenCalledWith(123, "message", { parse_mode: undefined });
+  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", { parse_mode: undefined, disable_notification: false });
 
   expect(sendTo(123, "message", "HTML")).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenCalledWith(123, "message", { parse_mode: undefined });
+  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", { parse_mode: "HTML", disable_notification: false });
 
   expect(sendTo(123, "message", "Markdown")).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenCalledWith(123, "message", { parse_mode: "Markdown" });
+  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", { parse_mode: "Markdown", disable_notification: false });
 
   expect(bot.sendMessage).toHaveBeenCalledTimes(3);
 });
@@ -149,8 +149,8 @@ test("sendTo", () => {
 test("sendToGroup", () => {
   expect(sendToGroup("group", "message")).rejects.toThrowError();
 
-  expect(bot.sendMessage).toHaveBeenCalledWith("11111", "message", { parse_mode: undefined });
-  expect(bot.sendMessage).toHaveBeenCalledWith("22222", "message", { parse_mode: undefined });
+  expect(bot.sendMessage).toHaveBeenCalledWith("11111", "message", { parse_mode: undefined, disable_notification: false });
+  expect(bot.sendMessage).toHaveBeenCalledWith("22222", "message", { parse_mode: undefined, disable_notification: false });
 
   expect(bot.sendMessage).toHaveBeenCalledTimes(5);
 });
@@ -158,9 +158,14 @@ test("sendToGroup", () => {
 test("sendError", () => {
   expect(sendError("Error")).rejects.toThrowError();
 
-  expect(bot.sendMessage).toHaveBeenCalledWith("33333", "Error", { parse_mode: undefined });
+  expect(bot.sendMessage).toHaveBeenLastCalledWith("33333", "Error", { parse_mode: undefined, disable_notification: false });
 
   expect(bot.sendMessage).toHaveBeenCalledTimes(6);
+});
+
+test("sendTo sanitize HTML", () => {
+  expect(sendTo(123, "<b>text</b><<>&text<i>texxxttt</i>&", "HTML", true)).rejects.toThrowError();
+  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", { parse_mode: "HTML", disable_notification: true });
 });
 
 test("groupToUserInfo", () => {
