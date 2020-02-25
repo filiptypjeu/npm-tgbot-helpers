@@ -3,7 +3,7 @@ import { LocalStorage } from "node-localstorage";
 import TelegramBot, { Message, ParseMode } from "node-telegram-bot-api";
 import os from "os";
 import readLastLines from "read-last-lines";
-import sanitizeHtml from 'sanitize-html';
+import sanitizeHtml from "sanitize-html";
 
 /**
  * @todo
@@ -229,42 +229,47 @@ export const isInGroup = (groupName: string, userId: number | string) => {
 };
 
 export const sendTo = async (userId: number | string, text: string, parseMode?: ParseMode, silent: boolean = false) => {
-  bot.sendMessage(userId, parseMode === "HTML" ? sanitizeHtml(text, { allowedTags: [ 'b', 'i' ] }) : text, { parse_mode: parseMode, disable_notification: silent }).catch(async e => {
-    if (e.code === "ETELEGRAM") {
-      if (e.response.body.description === "Bad Request: message is too long") {
-        const splitText = text.split("\n");
-        if (splitText.length > 1) {
-          await sendTo(
-            userId,
-            splitText
-              .slice(0, Math.round(splitText.length / 2))
-              .join("\n")
-              .trim(),
-            parseMode,
-            silent,
-          );
-          await sendTo(
-            userId,
-            splitText
-              .slice(Math.round(splitText.length / 2))
-              .join("\n")
-              .trim(),
-            parseMode,
-            silent,
-          );
+  bot
+    .sendMessage(userId, parseMode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i"] }) : text, {
+      parse_mode: parseMode,
+      disable_notification: silent,
+    })
+    .catch(async e => {
+      if (e.code === "ETELEGRAM") {
+        if (e.response.body.description === "Bad Request: message is too long") {
+          const splitText = text.split("\n");
+          if (splitText.length > 1) {
+            await sendTo(
+              userId,
+              splitText
+                .slice(0, Math.round(splitText.length / 2))
+                .join("\n")
+                .trim(),
+              parseMode,
+              silent
+            );
+            await sendTo(
+              userId,
+              splitText
+                .slice(Math.round(splitText.length / 2))
+                .join("\n")
+                .trim(),
+              parseMode,
+              silent
+            );
+          } else {
+            sendError(`Message to userId ${userId} too long (${text.length} characters)...`);
+          }
         } else {
-          sendError(`Message to userId ${userId} too long (${text.length} characters)...`);
+          sendError(
+            `Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`
+          );
         }
       } else {
-        sendError(
-          `Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`
-        );
+        console.log(e.code);
+        console.log(e.response.body);
       }
-    } else {
-      console.log(e.code);
-      console.log(e.response.body);
-    }
-  });
+    });
 };
 
 export const sendToGroup = async (groupName: string, text: string, parseMode?: ParseMode, silent: boolean = false) => {
@@ -586,7 +591,8 @@ export const defaultCommandGroups = () => {
     } else {
       sendTo(
         msg.chat.id,
-        groups.length > 0 ? `<b>Available groups</b>:\n${groups.map((g, i) => `${i} ${g}`).join("\n")}` : "No groups available...", "HTML"
+        groups.length > 0 ? `<b>Available groups</b>:\n${groups.map((g, i) => `${i} ${g}`).join("\n")}` : "No groups available...",
+        "HTML"
       );
     }
   };

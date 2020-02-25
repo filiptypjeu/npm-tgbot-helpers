@@ -165,7 +165,10 @@ test("sendError", () => {
 
 test("sendTo sanitize HTML", () => {
   expect(sendTo(123, "<b>text</b><<>&text<i>texxxttt</i>&", "HTML", true)).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", { parse_mode: "HTML", disable_notification: true });
+  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", {
+    parse_mode: "HTML",
+    disable_notification: true,
+  });
 });
 
 test("groupToUserInfo", () => {
