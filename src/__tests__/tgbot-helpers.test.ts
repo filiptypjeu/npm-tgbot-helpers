@@ -135,13 +135,13 @@ test("getArguments", () => {
 
 test("sendTo", () => {
   expect(sendTo(123, "message")).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", { parse_mode: undefined, disable_notification: false });
+  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", { parse_mode: undefined, disable_notification: false, disable_web_page_preview: false });
 
   expect(sendTo(123, "message", "HTML")).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", { parse_mode: "HTML", disable_notification: false });
+  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", { parse_mode: "HTML", disable_notification: false, disable_web_page_preview: false });
 
   expect(sendTo(123, "message", "Markdown")).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", { parse_mode: "Markdown", disable_notification: false });
+  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", { parse_mode: "Markdown", disable_notification: false, disable_web_page_preview: false });
 
   expect(bot.sendMessage).toHaveBeenCalledTimes(3);
 });
@@ -149,8 +149,8 @@ test("sendTo", () => {
 test("sendToGroup", () => {
   expect(sendToGroup("group", "message")).rejects.toThrowError();
 
-  expect(bot.sendMessage).toHaveBeenCalledWith("11111", "message", { parse_mode: undefined, disable_notification: false });
-  expect(bot.sendMessage).toHaveBeenCalledWith("22222", "message", { parse_mode: undefined, disable_notification: false });
+  expect(bot.sendMessage).toHaveBeenCalledWith("11111", "message", { parse_mode: undefined, disable_notification: false, disable_web_page_preview: false });
+  expect(bot.sendMessage).toHaveBeenCalledWith("22222", "message", { parse_mode: undefined, disable_notification: false, disable_web_page_preview: false });
 
   expect(bot.sendMessage).toHaveBeenCalledTimes(5);
 });
@@ -158,9 +158,16 @@ test("sendToGroup", () => {
 test("sendError", () => {
   expect(sendError("Error")).rejects.toThrowError();
 
-  expect(bot.sendMessage).toHaveBeenLastCalledWith("33333", "Error", { parse_mode: undefined, disable_notification: false });
+  expect(bot.sendMessage).toHaveBeenLastCalledWith("33333", "Error", { parse_mode: undefined, disable_notification: false, disable_web_page_preview: false });
 
   expect(bot.sendMessage).toHaveBeenCalledTimes(6);
+});
+
+test("sendTo SendMessageOptions", () => {
+  expect(sendTo(123, "message", { parse_mode: "Markdown", disable_web_page_preview: true, disable_notification: true })).rejects.toThrowError();
+  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", { parse_mode: "Markdown", disable_notification: true, disable_web_page_preview: true });
+
+  expect(bot.sendMessage).toHaveBeenCalledTimes(7);
 });
 
 test("sendTo sanitize HTML", () => {
@@ -168,7 +175,10 @@ test("sendTo sanitize HTML", () => {
   expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", {
     parse_mode: "HTML",
     disable_notification: true,
+    disable_web_page_preview: false
   });
+
+  expect(bot.sendMessage).toHaveBeenCalledTimes(8);
 });
 
 test("groupToUserInfo", () => {

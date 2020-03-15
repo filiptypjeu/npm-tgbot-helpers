@@ -228,12 +228,17 @@ export const isInGroup = (groupName: string, userId: number | string) => {
   return variableToList(groupName).includes(userId.toString());
 };
 
-export const sendTo = async (userId: number | string, text: string, parseMode?: ParseMode, silent: boolean = false) => {
+export async function sendTo(userId: number | string, text: string, options?: TelegramBot.SendMessageOptions): Promise<void>;
+export async function sendTo(userId: number | string, text: string, parseMode?: ParseMode, silent?: boolean, noPreview?: boolean): Promise<void>;
+export async function sendTo(userId: number | string, text: string, param?: ParseMode | TelegramBot.SendMessageOptions, silent: boolean = false, noPreview: boolean = false) {
+  const sendOptions: TelegramBot.SendMessageOptions = typeof param === "object" ? param : {
+    parse_mode: param,
+    disable_notification: silent,
+    disable_web_page_preview: noPreview,
+  };
+
   bot
-    .sendMessage(userId, parseMode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i"] }) : text, {
-      parse_mode: parseMode,
-      disable_notification: silent,
-    })
+    .sendMessage(userId, sendOptions.parse_mode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i"] }) : text, sendOptions)
     .catch(async e => {
       if (e.code === "ETELEGRAM") {
         if (e.response.body.description === "Bad Request: message is too long") {
@@ -245,8 +250,7 @@ export const sendTo = async (userId: number | string, text: string, parseMode?: 
                 .slice(0, Math.round(splitText.length / 2))
                 .join("\n")
                 .trim(),
-              parseMode,
-              silent
+              sendOptions
             );
             await sendTo(
               userId,
@@ -254,8 +258,7 @@ export const sendTo = async (userId: number | string, text: string, parseMode?: 
                 .slice(Math.round(splitText.length / 2))
                 .join("\n")
                 .trim(),
-              parseMode,
-              silent
+              sendOptions
             );
           } else {
             sendError(`Message to userId ${userId} too long (${text.length} characters)...`);
@@ -272,8 +275,15 @@ export const sendTo = async (userId: number | string, text: string, parseMode?: 
     });
 };
 
-export const sendToGroup = async (groupName: string, text: string, parseMode?: ParseMode, silent: boolean = false) => {
-  return Promise.all(variableToList(groupName).map(id => sendTo(id, text, parseMode, silent)));
+export async function sendToGroup(groupName: string, text: string, options?: TelegramBot.SendMessageOptions): Promise<void[]>;
+export async function sendToGroup(groupName: string, text: string, parseMode?: ParseMode, silent?: boolean, noPreview?: boolean): Promise<void[]>;
+export async function sendToGroup(groupName: string, text: string, param?: ParseMode | TelegramBot.SendMessageOptions, silent: boolean = false, noPreview: boolean = false) {
+  const sendOptions: TelegramBot.SendMessageOptions = typeof param === "object" ? param : {
+    parse_mode: param,
+    disable_notification: silent,
+    disable_web_page_preview: noPreview,
+  };
+  return Promise.all(variableToList(groupName).map(id => sendTo(id, text, sendOptions)));
 };
 
 export const sendError = async (e: any) => {
@@ -282,11 +292,21 @@ export const sendError = async (e: any) => {
 };
 
 export function variable(variableName: string): string;
-export function variable(variableName: string, value: string | number): void;
-export function variable(variableName: string, value?: string | number) {
+export function variable(variableName: string, value: string): void;
+export function variable(variableName: string, value: number): void;
+export function variable(variableName: string, value: Array<string | number>): void;
+export function variable(variableName: string, value: object): void;
+export function variable(variableName: string, value?: string | number | Array<string | number> | object) {
   if (value === undefined) {
     return ls.getItem(variableName) || "";
   }
+
+  if (Array.isArray(value)) {
+    return ls.setItem(variableName, value.join("\n"));
+  } else if (typeof value === "object") {
+    return ls.setItem(variableName, JSON.stringify(value));
+  }
+
   return ls.setItem(variableName, value.toString());
 }
 
@@ -435,34 +455,37 @@ export const defaultCommandKill = (msg: TelegramBot.Message) => {
   }, 3000);
 };
 
-export const defaultCommandVar = async (msg: TelegramBot.Message) => {
-  const args = getArguments(msg.text);
+export const defaultCommandVar = (variables?: string[]) => {
+  return async (msg: TelegramBot.Message) => {
+    const varsToUse = variables || gVars;
+    const args = getArguments(msg.text);
 
-  if (!args[0]) {
-    return sendTo(
-      msg.chat.id,
-      "<b>Available global variables:</b>\n" +
-        gVars
-          .map((v, i) => {
-            const value = variable(v);
-            return `${i} ${v} ${value ? value : "null"}`;
-          })
-          .join("\n"),
-      "HTML"
-    );
-  } else if (!args[1]) {
-    return sendTo(msg.chat.id, "Please provide two arguments.");
-  } else if (Number(args[0]) >= 0 && Number(args[0]) < gVars.length) {
-    variable(
-      gVars[Number(args[0])],
-      args
-        .slice(1)
-        .join(" ")
-        .trim()
-    );
-    return sendTo(msg.chat.id, `Global variable set: <b>${gVars[Number(args[0])]} = ${variable(gVars[Number(args[0])])}</b>`, "HTML");
-  } else {
-    return sendTo(msg.chat.id, `Global variable ${args[0]} does not exist.`);
+    if (!args[0]) {
+      return sendTo(
+        msg.chat.id,
+        "<b>Available variables:</b>\n" +
+          varsToUse
+            .map((v, i) => {
+              const value = variable(v);
+              return `${i} ${v} ${value ? value : "null"}`;
+            })
+            .join("\n"),
+        "HTML"
+      );
+    } else if (!args[1]) {
+      return sendTo(msg.chat.id, "Please provide two arguments.");
+    } else if (Number(args[0]) >= 0 && Number(args[0]) < varsToUse.length) {
+      variable(
+        varsToUse[Number(args[0])],
+        args
+          .slice(1)
+          .join(" ")
+          .trim()
+      );
+      return sendTo(msg.chat.id, `Variable set: <b>${varsToUse[Number(args[0])]} = ${variable(varsToUse[Number(args[0])])}</b>`, "HTML");
+    } else {
+      return sendTo(msg.chat.id, `Variable ${args[0]} does not exist.`);
+    }
   }
 };
 
@@ -476,11 +499,11 @@ export const defaultCommandAdmin = (groupName: string, emptyResponse?: string) =
   };
 };
 
-export const defaultCommandLog = (logPath: string) => {
+export const defaultCommandLog = (logPath: string, keys?: string) => {
   return async (msg: TelegramBot.Message) => {
     return readLastLines
       .read(logPath, Number(getArguments(msg.text)[0]) < 50 ? Number(getArguments(msg.text)[0]) : 50)
-      .then(s => sendTo(msg.chat.id, s ? s : `File ${logPath} is empty.`))
+      .then(s => sendTo(msg.chat.id, s ? (keys ? `<b>${keys}</b>\n${s}` : s) : `File ${logPath} is empty.`, "HTML"))
       .catch(e => sendError(e));
   };
 };
