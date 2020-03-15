@@ -229,13 +229,28 @@ export const isInGroup = (groupName: string, userId: number | string) => {
 };
 
 export async function sendTo(userId: number | string, text: string, options?: TelegramBot.SendMessageOptions): Promise<void>;
-export async function sendTo(userId: number | string, text: string, parseMode?: ParseMode, silent?: boolean, noPreview?: boolean): Promise<void>;
-export async function sendTo(userId: number | string, text: string, param?: ParseMode | TelegramBot.SendMessageOptions, silent: boolean = false, noPreview: boolean = false) {
-  const sendOptions: TelegramBot.SendMessageOptions = typeof param === "object" ? param : {
-    parse_mode: param,
-    disable_notification: silent,
-    disable_web_page_preview: noPreview,
-  };
+export async function sendTo(
+  userId: number | string,
+  text: string,
+  parseMode?: ParseMode,
+  silent?: boolean,
+  noPreview?: boolean
+): Promise<void>;
+export async function sendTo(
+  userId: number | string,
+  text: string,
+  param?: ParseMode | TelegramBot.SendMessageOptions,
+  silent: boolean = false,
+  noPreview: boolean = false
+) {
+  const sendOptions: TelegramBot.SendMessageOptions =
+    typeof param === "object"
+      ? param
+      : {
+          parse_mode: param,
+          disable_notification: silent,
+          disable_web_page_preview: noPreview,
+        };
 
   bot
     .sendMessage(userId, sendOptions.parse_mode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i"] }) : text, sendOptions)
@@ -273,18 +288,33 @@ export async function sendTo(userId: number | string, text: string, param?: Pars
         console.log(e.response.body);
       }
     });
-};
+}
 
 export async function sendToGroup(groupName: string, text: string, options?: TelegramBot.SendMessageOptions): Promise<void[]>;
-export async function sendToGroup(groupName: string, text: string, parseMode?: ParseMode, silent?: boolean, noPreview?: boolean): Promise<void[]>;
-export async function sendToGroup(groupName: string, text: string, param?: ParseMode | TelegramBot.SendMessageOptions, silent: boolean = false, noPreview: boolean = false) {
-  const sendOptions: TelegramBot.SendMessageOptions = typeof param === "object" ? param : {
-    parse_mode: param,
-    disable_notification: silent,
-    disable_web_page_preview: noPreview,
-  };
+export async function sendToGroup(
+  groupName: string,
+  text: string,
+  parseMode?: ParseMode,
+  silent?: boolean,
+  noPreview?: boolean
+): Promise<void[]>;
+export async function sendToGroup(
+  groupName: string,
+  text: string,
+  param?: ParseMode | TelegramBot.SendMessageOptions,
+  silent: boolean = false,
+  noPreview: boolean = false
+) {
+  const sendOptions: TelegramBot.SendMessageOptions =
+    typeof param === "object"
+      ? param
+      : {
+          parse_mode: param,
+          disable_notification: silent,
+          disable_web_page_preview: noPreview,
+        };
   return Promise.all(variableToList(groupName).map(id => sendTo(id, text, sendOptions)));
-};
+}
 
 export const sendError = async (e: any) => {
   console.error(e);
@@ -292,10 +322,7 @@ export const sendError = async (e: any) => {
 };
 
 export function variable(variableName: string): string;
-export function variable(variableName: string, value: string): void;
-export function variable(variableName: string, value: number): void;
-export function variable(variableName: string, value: Array<string | number>): void;
-export function variable(variableName: string, value: object): void;
+export function variable(variableName: string, value: string | number | Array<string | number> | object): void;
 export function variable(variableName: string, value?: string | number | Array<string | number> | object) {
   if (value === undefined) {
     return ls.getItem(variableName) || "";
@@ -486,7 +513,7 @@ export const defaultCommandVar = (variables?: string[]) => {
     } else {
       return sendTo(msg.chat.id, `Variable ${args[0]} does not exist.`);
     }
-  }
+  };
 };
 
 export const defaultCommandAdmin = (groupName: string, emptyResponse?: string) => {
