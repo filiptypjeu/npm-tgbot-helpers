@@ -253,7 +253,7 @@ export async function sendTo(
         };
 
   bot
-    .sendMessage(userId, text, sendOptions)//sendOptions.parse_mode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i"] }) : text, sendOptions)
+    .sendMessage(userId, text, sendOptions) // sendOptions.parse_mode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i"] }) : text, sendOptions)
     .catch(async e => {
       if (e.code === "ETELEGRAM") {
         if (e.response.body.description === "Bad Request: message is too long") {
