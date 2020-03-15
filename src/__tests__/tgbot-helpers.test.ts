@@ -200,16 +200,16 @@ test("sendTo SendMessageOptions", () => {
   expect(bot.sendMessage).toHaveBeenCalledTimes(7);
 });
 
-test("sendTo sanitize HTML", () => {
-  expect(sendTo(123, "<b>text</b><<>&text<i>texxxttt</i>&", "HTML", true)).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", {
-    parse_mode: "HTML",
-    disable_notification: true,
-    disable_web_page_preview: false,
-  });
+// test("sendTo sanitize HTML", () => {
+//   expect(sendTo(123, "<b>text</b><<>&text<i>texxxttt</i>&", "HTML", true)).rejects.toThrowError();
+//   expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", {
+//     parse_mode: "HTML",
+//     disable_notification: true,
+//     disable_web_page_preview: false,
+//   });
 
-  expect(bot.sendMessage).toHaveBeenCalledTimes(8);
-});
+//   expect(bot.sendMessage).toHaveBeenCalledTimes(8);
+// });
 
 test("groupToUserInfo", () => {
   expect(groupToUserInfo("group")).rejects.toThrowError();
