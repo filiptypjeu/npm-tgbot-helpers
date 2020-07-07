@@ -239,4 +239,3 @@ test("groupToUserInfo", () => {
 
   expect(bot.getChat).toHaveBeenCalledTimes(2);
 });
-

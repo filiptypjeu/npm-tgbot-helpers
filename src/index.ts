@@ -234,13 +234,7 @@ export const isInGroup = (groupName: Group, userId: ChatID) => {
 };
 
 export async function sendTo(userId: ChatID, text: string, options?: TelegramBot.SendMessageOptions): Promise<void>;
-export async function sendTo(
-  userId: ChatID,
-  text: string,
-  parseMode?: ParseMode,
-  silent?: boolean,
-  noPreview?: boolean
-): Promise<void>;
+export async function sendTo(userId: ChatID, text: string, parseMode?: ParseMode, silent?: boolean, noPreview?: boolean): Promise<void>;
 export async function sendTo(
   userId: ChatID,
   text: string,
@@ -442,7 +436,7 @@ export const userIdFromCommand = (command: Command, splitAt: string = "_", minus
   }
 
   return undefined;
-}
+};
 
 export const commandFriendlyUserId = (userId: ChatID, minusSubstitute: string = "m"): string => {
   let s: string = userId.toString();
@@ -451,7 +445,7 @@ export const commandFriendlyUserId = (userId: ChatID, minusSubstitute: string = 
   }
 
   return s;
-}
+};
 
 export const defaultCommandUptime = async (msg: TelegramBot.Message) => {
   return Promise.all([getDurationString(startTime), getDurationString(os.uptime() * 1000)]).then(([s1, s2]) =>
