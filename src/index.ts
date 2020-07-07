@@ -3,7 +3,7 @@ import { LocalStorage } from "node-localstorage";
 import TelegramBot, { Message, ParseMode } from "node-telegram-bot-api";
 import os from "os";
 import readLastLines from "read-last-lines";
-// import sanitizeHtml from "sanitize-html";
+import sanitizeHtml from "sanitize-html";
 
 /**
  * @todo
@@ -258,7 +258,7 @@ export async function sendTo(
         };
 
   bot
-    .sendMessage(userId, text, sendOptions) // sendOptions.parse_mode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i"] }) : text, sendOptions)
+    .sendMessage(userId, sendOptions.parse_mode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i"] }) : text, sendOptions)
     .catch(async e => {
       if (e.code === "ETELEGRAM") {
         if (e.response.body.description === "Bad Request: message is too long") {
