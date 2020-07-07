@@ -17,6 +17,8 @@ import {
   sendError,
   groupToUserInfo,
   userVariable,
+  userIdFromCommand,
+  commandFriendlyUserId,
 } from "../index";
 
 initBot({
@@ -133,6 +135,24 @@ test("getArguments", () => {
   expect(getArguments("/test\na     b   \n\n   \n c   \n  ")).toEqual(["a", "b", "c"]);
 });
 
+test("userIdFromCommand", () => {
+  expect(userIdFromCommand("/command_12345")).toEqual(12345);
+  expect(userIdFromCommand("/command_m12345")).toEqual(-12345);
+  expect(userIdFromCommand("/command_12345m")).toEqual(undefined);
+  expect(userIdFromCommand("/command_12345", "3")).toEqual(45);
+  expect(userIdFromCommand("/commands_12345", "3", "4")).toEqual(-5);
+  expect(userIdFromCommand("/commands_123.45")).toEqual(undefined);
+});
+
+test("commandFriendlyUserId", () => {
+  expect(commandFriendlyUserId(12345)).toEqual("12345");
+  expect(commandFriendlyUserId("12345")).toEqual("12345");
+  expect(commandFriendlyUserId(-12345)).toEqual("m12345");
+  expect(commandFriendlyUserId("-12345")).toEqual("m12345");
+  expect(commandFriendlyUserId(-12345, "MINUS")).toEqual("MINUS12345");
+  expect(commandFriendlyUserId("-12345", "MINUS")).toEqual("MINUS12345");
+});
+
 test("sendTo", () => {
   expect(sendTo(123, "message")).rejects.toThrowError();
   expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
@@ -219,3 +239,4 @@ test("groupToUserInfo", () => {
 
   expect(bot.getChat).toHaveBeenCalledTimes(2);
 });
+

@@ -425,6 +425,34 @@ export const toggleUserIdInGroup = (groupName: Group, userId: ChatID): boolean =
   return true;
 };
 
+export const userIdFromCommand = (command: Command, splitAt: string = "_", minusSubstitute: string = "m"): ChatID | undefined => {
+  let arg = command.split(splitAt)[1];
+  if (!arg.length) {
+    return undefined;
+  }
+
+  if (arg[0] === minusSubstitute) {
+    arg = "-" + arg.slice(1);
+  }
+
+  const userId = Number(arg);
+
+  if (Number.isSafeInteger(userId)) {
+    return userId;
+  }
+
+  return undefined;
+}
+
+export const commandFriendlyUserId = (userId: ChatID, minusSubstitute: string = "m"): string => {
+  let s: string = userId.toString();
+  if (s.length && s[0] === "-") {
+    s = minusSubstitute + s.slice(1);
+  }
+
+  return s;
+}
+
 export const defaultCommandUptime = async (msg: TelegramBot.Message) => {
   return Promise.all([getDurationString(startTime), getDurationString(os.uptime() * 1000)]).then(([s1, s2]) =>
     sendTo(msg.chat.id, `Bot uptime: ${s1}\nOS uptime: ${s2}`)
@@ -489,7 +517,7 @@ export const defaultCommandKill = (msg: TelegramBot.Message) => {
 
 export const defaultCommandVar = (variables?: Variable[]) => {
   return async (msg: TelegramBot.Message) => {
-    const varsToUse = variables || gVars;
+    const varsToUse: Variable[] = variables || gVars;
     const args = getArguments(msg.text);
 
     if (!args[0]) {
@@ -592,7 +620,7 @@ export const defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, r
       `<b>Request for group <i>${requestFor}</i>:</b>\n - ` +
         msgInfoToString(msg).join("\n - ") +
         `\n - Is in group: ${isInGroup(requestFor, msg.chat.id)}\n` +
-        `/${toggleCommand}_${msg.chat.id}`,
+        `/${toggleCommand}_${commandFriendlyUserId(msg.chat.id)}`,
       "HTML"
     );
   };
@@ -608,7 +636,7 @@ export const defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, r
  */
 export const defaultCommandToggle = (requestFor: Group, response: string) => {
   return (msg: TelegramBot.Message) => {
-    const userId: ChatID = msg.text!.split(" ")[0].split("_")[1];
+    const userId = userIdFromCommand(msg.text!.split(" ")[0]);
     if (!userId) {
       sendTo(msg.chat.id, `Use ${msg.text!.split(" ")[0].split("_")[0]}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`, "HTML");
       return;
