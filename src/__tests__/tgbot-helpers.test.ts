@@ -17,6 +17,8 @@ import {
   sendError,
   groupToUserInfo,
   userVariable,
+  userIdFromCommand,
+  commandFriendlyUserId,
 } from "../index";
 
 initBot({
@@ -133,6 +135,24 @@ test("getArguments", () => {
   expect(getArguments("/test\na     b   \n\n   \n c   \n  ")).toEqual(["a", "b", "c"]);
 });
 
+test("userIdFromCommand", () => {
+  expect(userIdFromCommand("/command_12345")).toEqual(12345);
+  expect(userIdFromCommand("/command_m12345")).toEqual(-12345);
+  expect(userIdFromCommand("/command_12345m")).toEqual(undefined);
+  expect(userIdFromCommand("/command_12345", "3")).toEqual(45);
+  expect(userIdFromCommand("/commands_12345", "3", "4")).toEqual(-5);
+  expect(userIdFromCommand("/commands_123.45")).toEqual(undefined);
+});
+
+test("commandFriendlyUserId", () => {
+  expect(commandFriendlyUserId(12345)).toEqual("12345");
+  expect(commandFriendlyUserId("12345")).toEqual("12345");
+  expect(commandFriendlyUserId(-12345)).toEqual("m12345");
+  expect(commandFriendlyUserId("-12345")).toEqual("m12345");
+  expect(commandFriendlyUserId(-12345, "MINUS")).toEqual("MINUS12345");
+  expect(commandFriendlyUserId("-12345", "MINUS")).toEqual("MINUS12345");
+});
+
 test("sendTo", () => {
   expect(sendTo(123, "message")).rejects.toThrowError();
   expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
@@ -200,16 +220,16 @@ test("sendTo SendMessageOptions", () => {
   expect(bot.sendMessage).toHaveBeenCalledTimes(7);
 });
 
-// test("sendTo sanitize HTML", () => {
-//   expect(sendTo(123, "<b>text</b><<>&text<i>texxxttt</i>&", "HTML", true)).rejects.toThrowError();
-//   expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", {
-//     parse_mode: "HTML",
-//     disable_notification: true,
-//     disable_web_page_preview: false,
-//   });
+test("sendTo sanitize HTML", () => {
+  expect(sendTo(123, "<b>text</b><<>&text<i>texxxttt</i>&", "HTML", true)).rejects.toThrowError();
+  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", {
+    parse_mode: "HTML",
+    disable_notification: true,
+    disable_web_page_preview: false,
+  });
 
-//   expect(bot.sendMessage).toHaveBeenCalledTimes(8);
-// });
+  expect(bot.sendMessage).toHaveBeenCalledTimes(8);
+});
 
 test("groupToUserInfo", () => {
   expect(groupToUserInfo("group")).rejects.toThrowError();
@@ -219,3 +239,4 @@ test("groupToUserInfo", () => {
 
   expect(bot.getChat).toHaveBeenCalledTimes(2);
 });
+
