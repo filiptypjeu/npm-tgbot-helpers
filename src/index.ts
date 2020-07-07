@@ -37,9 +37,9 @@ export interface IBotHelperProps {
 }
 
 export interface IBotHelperCommand {
-  command: string;
+  command: Command;
   regexp?: RegExp;
-  group?: string;
+  group?: Group;
   privateOnly?: boolean;
   matchBeginningOnly?: boolean;
   hide?: boolean;
@@ -49,16 +49,21 @@ export interface IBotHelperCommand {
   callback: (msg: Message) => void;
 }
 
+type Group = string;
+type Variable = string;
+type Command = string;
+type ChatID = string | number;
+
 let bot: TelegramBot;
 let ls: LocalStorage;
 
 const startTime = new Date();
-const deactivatedCommands: string = "TGBOT_deactivatedcommands";
+const deactivatedCommands: Variable = "TGBOT_deactivatedcommands";
 let commands: IBotHelperCommand[] = [];
-let groups: string[] = [];
-let errorGroup: string = "";
-let uVars: string[] = [];
-let gVars: string[] = [];
+let groups: Group[] = [];
+let errorGroup: Group = "";
+let uVars: Variable[] = [];
+let gVars: Variable[] = [];
 let commandLogPath = "./logs/commands.log";
 
 const commandRegExp = (c: IBotHelperCommand): RegExp => {
@@ -224,20 +229,20 @@ export const getArguments = (text?: string): string[] => {
   return [];
 };
 
-export const isInGroup = (groupName: string, userId: number | string) => {
+export const isInGroup = (groupName: Group, userId: ChatID) => {
   return variableToList(groupName).includes(userId.toString());
 };
 
-export async function sendTo(userId: number | string, text: string, options?: TelegramBot.SendMessageOptions): Promise<void>;
+export async function sendTo(userId: ChatID, text: string, options?: TelegramBot.SendMessageOptions): Promise<void>;
 export async function sendTo(
-  userId: number | string,
+  userId: ChatID,
   text: string,
   parseMode?: ParseMode,
   silent?: boolean,
   noPreview?: boolean
 ): Promise<void>;
 export async function sendTo(
-  userId: number | string,
+  userId: ChatID,
   text: string,
   param?: ParseMode | TelegramBot.SendMessageOptions,
   silent: boolean = false,
@@ -290,16 +295,16 @@ export async function sendTo(
     });
 }
 
-export async function sendToGroup(groupName: string, text: string, options?: TelegramBot.SendMessageOptions): Promise<void[]>;
+export async function sendToGroup(groupName: Group, text: string, options?: TelegramBot.SendMessageOptions): Promise<void[]>;
 export async function sendToGroup(
-  groupName: string,
+  groupName: Group,
   text: string,
   parseMode?: ParseMode,
   silent?: boolean,
   noPreview?: boolean
 ): Promise<void[]>;
 export async function sendToGroup(
-  groupName: string,
+  groupName: Group,
   text: string,
   param?: ParseMode | TelegramBot.SendMessageOptions,
   silent: boolean = false,
@@ -321,9 +326,9 @@ export const sendError = async (e: any) => {
   return sendToGroup(errorGroup, e.toString() ? e.toString().slice(0, 3000) : "Error...");
 };
 
-export function variable(variableName: string): string;
-export function variable(variableName: string, value: string | number | Array<string | number> | object): void;
-export function variable(variableName: string, value?: string | number | Array<string | number> | object) {
+export function variable(variableName: Variable): string;
+export function variable(variableName: Variable, value: string | number | Array<string | number> | object): void;
+export function variable(variableName: Variable, value?: string | number | Array<string | number> | object) {
   if (value === undefined) {
     return ls.getItem(variableName) || "";
   }
@@ -358,9 +363,9 @@ export const variableToList = (variableName: string): string[] => {
     : [];
 };
 
-export function variableToObject(variableName: string): object;
-export function variableToObject(variableName: string, property: string, value?: any): void;
-export function variableToObject(variableName: string, property?: string, value?: any) {
+export function variableToObject(variableName: Variable): object;
+export function variableToObject(variableName: Variable, property: string, value?: any): void;
+export function variableToObject(variableName: Variable, property?: string, value?: any) {
   const object = JSON.parse(variable(variableName) || "{}");
   if (!property) {
     return object;
@@ -374,11 +379,11 @@ export function variableToObject(variableName: string, property?: string, value?
   return;
 }
 
-export const userVariable = (variableName: string, userId: string | number) => {
+export const userVariable = (variableName: Variable, userId: ChatID) => {
   return variableName + "_" + userId;
 };
 
-export const groupToUserInfo = async (variableName: string, extraInfo?: string[]) => {
+export const groupToUserInfo = async (variableName: Variable, extraInfo?: string[]) => {
   const userIds = variableToList(variableName);
 
   if (userIds.length > 0) {
@@ -396,7 +401,7 @@ export const groupToUserInfo = async (variableName: string, extraInfo?: string[]
   }
 };
 
-export const addUserIdToGroup = (groupName: string, userId: number | string): boolean => {
+export const addUserIdToGroup = (groupName: Group, userId: ChatID): boolean => {
   const userIds = variableToList(groupName);
 
   if (!userIds.includes(userId.toString())) {
@@ -407,7 +412,7 @@ export const addUserIdToGroup = (groupName: string, userId: number | string): bo
   return false;
 };
 
-export const toggleUserIdInGroup = (groupName: string, userId: number | string): boolean => {
+export const toggleUserIdInGroup = (groupName: Group, userId: ChatID): boolean => {
   const userIds = variableToList(groupName);
 
   if (userIds.includes(userId.toString())) {
@@ -432,7 +437,7 @@ export const defaultCommandIP = async (msg: TelegramBot.Message) => {
 
   Object.keys(ifaces).forEach(ifname => {
     let alias = 0;
-    ifaces[ifname].forEach(iface => {
+    ifaces[ifname]!.forEach(iface => {
       // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
       if (iface.family !== "IPv4" || iface.internal) {
         return;
@@ -482,7 +487,7 @@ export const defaultCommandKill = (msg: TelegramBot.Message) => {
   }, 3000);
 };
 
-export const defaultCommandVar = (variables?: string[]) => {
+export const defaultCommandVar = (variables?: Variable[]) => {
   return async (msg: TelegramBot.Message) => {
     const varsToUse = variables || gVars;
     const args = getArguments(msg.text);
@@ -516,7 +521,7 @@ export const defaultCommandVar = (variables?: string[]) => {
   };
 };
 
-export const defaultCommandAdmin = (groupName: string, emptyResponse?: string) => {
+export const defaultCommandAdmin = (groupName: Group, emptyResponse?: string) => {
   return (msg: TelegramBot.Message) => {
     if (getArguments(msg.text)[0] === undefined) {
       sendTo(msg.chat.id, emptyResponse ? emptyResponse : `Use "${msg.text} your message here" to send a message to the administrator(s).`);
@@ -546,7 +551,7 @@ export const defaultCommandLog = (logPath: string, keys?: string) => {
  *
  * @param groupToInitTo The group to add the chat to.
  */
-export const defaultCommandInit = (groupToInitTo: string) => {
+export const defaultCommandInit = (groupToInitTo: Group) => {
   return (msg: TelegramBot.Message) => {
     const userIds = variableToList(groupToInitTo);
     if (!userIds.length) {
@@ -579,7 +584,7 @@ export const defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
   return sendTo(msg.chat.id, s);
 };
 
-export const defaultCommandRequest = (requestFor: string, sendRequestTo: string, response: string, toggleCommand: string) => {
+export const defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, response: string, toggleCommand: Command) => {
   return (msg: TelegramBot.Message) => {
     sendTo(msg.chat.id, response);
     sendToGroup(
@@ -601,9 +606,9 @@ export const defaultCommandRequest = (requestFor: string, sendRequestTo: string,
  *
  * @returns A callback method for a command.
  */
-export const defaultCommandToggle = (requestFor: string, response: string) => {
+export const defaultCommandToggle = (requestFor: Group, response: string) => {
   return (msg: TelegramBot.Message) => {
-    const userId = msg.text!.split(" ")[0].split("_")[1];
+    const userId: ChatID = msg.text!.split(" ")[0].split("_")[1];
     if (!userId) {
       sendTo(msg.chat.id, `Use ${msg.text!.split(" ")[0].split("_")[0]}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`, "HTML");
       return;
@@ -619,7 +624,7 @@ export const defaultCommandToggle = (requestFor: string, response: string) => {
   };
 };
 
-export const defaultCommandStart = (response: string, addToGroup: string, alertGroup: string, alertMessage?: string) => {
+export const defaultCommandStart = (response: string, addToGroup: Group, alertGroup: Group, alertMessage?: string) => {
   return (msg: TelegramBot.Message) => {
     sendTo(msg.chat.id, response, "HTML");
     if (addUserIdToGroup(addToGroup, msg.chat.id)) {
