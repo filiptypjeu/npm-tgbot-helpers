@@ -526,6 +526,12 @@ export const defaultCommandAdmin = (groupName: string, emptyResponse?: string) =
   };
 };
 
+/**
+ * Creates a callback method for a command that reads the last lines from a certain file and sends them to the chat. The amount of lines can be given as an argument when using the command.
+ *
+ * @param logPath The path to the file to read from.
+ * @param keys Optional string to use as a header.
+ */
 export const defaultCommandLog = (logPath: string, keys?: string) => {
   return async (msg: TelegramBot.Message) => {
     return readLastLines
@@ -535,6 +541,11 @@ export const defaultCommandLog = (logPath: string, keys?: string) => {
   };
 };
 
+/**
+ * Creates a callback method for a command that adds a chat to a certain gruop. Useful when for example starting the bot for the first time and adding yourself as the first admin.
+ *
+ * @param groupToInitTo The group to add the chat to.
+ */
 export const defaultCommandInit = (groupToInitTo: string) => {
   return (msg: TelegramBot.Message) => {
     const userIds = variableToList(groupToInitTo);
@@ -582,6 +593,14 @@ export const defaultCommandRequest = (requestFor: string, sendRequestTo: string,
   };
 };
 
+/**
+ * Create a callback method for a command that adds a certain chat to a group. The command has to be in the form "/<CMD>_<CHATID>", so that the chat ID in question can be retrieved from the command itself.
+ *
+ * @param requestFor The group.
+ * @param response The response for the one using the command.
+ *
+ * @returns A callback method for a command.
+ */
 export const defaultCommandToggle = (requestFor: string, response: string) => {
   return (msg: TelegramBot.Message) => {
     const userId = msg.text!.split(" ")[0].split("_")[1];
