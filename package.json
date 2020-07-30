@@ -1,6 +1,6 @@
 {
     "name": "tgbot-helpers",
-    "version": "1.12.1",
+    "version": "1.13.0",
     "description": "NPM package with a few helper methods for node-telegram-bot-api TelegramBots.",
     "main": "dist/index.js",
     "scripts": {
@@ -22,9 +22,9 @@
     "types": "dist/index.d.ts",
     "devDependencies": {
         "@types/jest": "^24.9.1",
-        "jest": "^24.9.0",
+        "jest": "^26.1.0",
         "prettier": "^1.19.1",
-        "ts-jest": "^24.3.0",
+        "ts-jest": "^26.1.1",
         "tslint": "^5.20.1",
         "tslint-config-prettier": "^1.18.0",
         "typescript": "^3.9.6"
