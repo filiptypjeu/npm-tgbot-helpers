@@ -19,6 +19,7 @@ import {
   userVariable,
   userIdFromCommand,
   commandFriendlyUserId,
+  longNameFromUser,
 } from "../index";
 
 initBot({
@@ -238,4 +239,29 @@ test("groupToUserInfo", () => {
   expect(bot.getChat).toHaveBeenCalledWith("22222");
 
   expect(bot.getChat).toHaveBeenCalledTimes(2);
+});
+
+test("longNameFromUser with username", () => {
+  const u = {
+    username: "USERNAME",
+  } as TelegramBot.User;
+
+  expect(longNameFromUser(u)).toEqual("USERNAME");
+
+  u.first_name = "FIRSTNAME";
+  expect(longNameFromUser(u)).toEqual("USERNAME (FIRSTNAME)");
+
+  u.last_name = "LASTNAME";
+  expect(longNameFromUser(u)).toEqual("USERNAME (FIRSTNAME LASTNAME)");
+});
+
+test("longNameFromUser no username", () => {
+  const u = {
+    first_name: "FIRSTNAME",
+  } as TelegramBot.User;
+
+  expect(longNameFromUser(u)).toEqual("FIRSTNAME");
+
+  u.last_name = "LASTNAME";
+  expect(longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME");
 });
