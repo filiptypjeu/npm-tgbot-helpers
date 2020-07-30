@@ -225,7 +225,7 @@ export const longNameFromUser = (user: TelegramBot.User): string => {
   }
 
   return name ? name : user.username!;
-}
+};
 
 export const getArguments = (text?: string): string[] => {
   if (text) {
@@ -555,7 +555,11 @@ export const defaultCommandVar = (variables?: Variable[]) => {
 
 export const defaultCommandSendTo = (header?: string, footer?: string) => {
   return (msg: TelegramBot.Message) => {
-    const text = msg.text!.split(" ").slice(1).join(" ").trim();
+    const text = msg
+      .text!.split(" ")
+      .slice(1)
+      .join(" ")
+      .trim();
     if (!text) {
       sendTo(msg.chat.id, `No text provided...`);
       return;
@@ -567,14 +571,11 @@ export const defaultCommandSendTo = (header?: string, footer?: string) => {
       return;
     }
 
-    bot.getChat(chatId)
+    bot
+      .getChat(chatId)
       .then(chat => {
         sendTo(msg.chat.id, `Message sent to chat ${chatId}!`);
-        sendTo(
-          chat.id,
-          `${header || ""}\n${text}\n${footer || ""}`.trim(),
-          "HTML"
-        );
+        sendTo(chat.id, `${header || ""}\n${text}\n${footer || ""}`.trim(), "HTML");
       })
       .catch(() => {
         sendTo(msg.chat.id, `No chat with ID ${chatId} is available to the bot...`);
@@ -585,7 +586,11 @@ export const defaultCommandSendTo = (header?: string, footer?: string) => {
   };
 };
 
-export const defaultCommandSendToGroup = (groupName: Group, emptyResponse: string, messageFormatter: (messageToFormat: TelegramBot.Message) => string) => {
+export const defaultCommandSendToGroup = (
+  groupName: Group,
+  emptyResponse: string,
+  messageFormatter: (messageToFormat: TelegramBot.Message) => string
+) => {
   return (msg: TelegramBot.Message) => {
     if (getArguments(msg.text)[0] === undefined) {
       sendTo(msg.chat.id, emptyResponse);
