@@ -217,6 +217,16 @@ export const msgInfoToString = (msg: TelegramBot.Message): string[] => {
   ];
 };
 
+export const longNameFromUser = (user: TelegramBot.User): string => {
+  const name = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+
+  if (name && user.username) {
+    return `${user.username} (${name})`;
+  }
+
+  return name ? name : user.username!;
+}
+
 export const getArguments = (text?: string): string[] => {
   if (text) {
     return text
