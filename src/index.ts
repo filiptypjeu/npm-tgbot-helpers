@@ -592,8 +592,8 @@ export const defaultCommandSendToGroup = (
   messageFormatter: (messageToFormat: TelegramBot.Message) => string
 ) => {
   return (msg: TelegramBot.Message) => {
-    if (getArguments(msg.text)[0] === undefined) {
-      sendTo(msg.chat.id, emptyResponse);
+    if (getArguments(msg.text)[0] === undefined && emptyResponse) {
+      sendTo(msg.chat.id, emptyResponse, "HTML");
     } else {
       sendToGroup(groupName, messageFormatter(msg), "HTML");
       sendTo(msg.chat.id, "Message sent!");
