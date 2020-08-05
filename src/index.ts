@@ -239,11 +239,33 @@ export const getArguments = (text?: string): string[] => {
   return [];
 };
 
-export const isInGroup = (groupName: Group, userId: ChatID) => {
+/**
+ * Returns whether or not a user/chat is member of a group.
+ *
+ * @param groupName The group in question.
+ * @param userId The user/chat ID in question.
+ */
+export const isInGroup = (groupName: Group, userId: ChatID): boolean => {
   return variableToList(groupName).includes(userId.toString());
 };
 
+/**
+ * Send a message to a chat. The message is automatically split into several messages if too long.
+ *
+ * @param userId The chat ID to send the message to.
+ * @param text The text to send.
+ * @param options Message options.
+ */
 export async function sendTo(userId: ChatID, text: string, options?: TelegramBot.SendMessageOptions): Promise<void>;
+/**
+ * Send a message to a chat. The message is automatically split into several messages if too long.
+ *
+ * @param userId The chat ID to send the message to.
+ * @param text The text to send.
+ * @param parseMode How to parse the text.
+ * @param silent True = no notification is shown for the receiver.
+ * @param noPreview  True = no web page preview is shown for the receiver.
+ */
 export async function sendTo(userId: ChatID, text: string, parseMode?: ParseMode, silent?: boolean, noPreview?: boolean): Promise<void>;
 export async function sendTo(
   userId: ChatID,
@@ -299,7 +321,23 @@ export async function sendTo(
     });
 }
 
+/**
+ * Send a message to each member of a group.
+ *
+ * @param groupName The group in question.
+ * @param text The text to send.
+ * @param options Message options.
+ */
 export async function sendToGroup(groupName: Group, text: string, options?: TelegramBot.SendMessageOptions): Promise<void[]>;
+/**
+ * Send a message to each member of a group.
+ *
+ * @param groupName The group in question.
+ * @param text The text to send.
+ * @param parseMode How to parse the text.
+ * @param silent True = no notification is shown for the receiver.
+ * @param noPreview  True = no web page preview is shown for the receiver.
+ */
 export async function sendToGroup(
   groupName: Group,
   text: string,
@@ -330,7 +368,18 @@ export const sendError = async (e: any) => {
   return sendToGroup(errorGroup, e.toString() ? e.toString().slice(0, 3000) : "Error...");
 };
 
+/**
+ * Get the value of a vraiable.
+ *
+ * @param variableName The name of the variable.
+ */
 export function variable(variableName: Variable): string;
+/**
+ * Set the value of a variable.
+ *
+ * @param variableName The name of the variable.
+ * @param value The new value of the variable.
+ */
 export function variable(variableName: Variable, value: string | number | Array<string | number> | object): void;
 export function variable(variableName: Variable, value?: string | number | Array<string | number> | object) {
   if (value === undefined) {
@@ -346,15 +395,33 @@ export function variable(variableName: Variable, value?: string | number | Array
   return ls.setItem(variableName, value.toString());
 }
 
+/**
+ * Get tha value of a variable as a Number.
+ *
+ * @param variableName The name of the variable.
+ * @param defaultValue The Number to default to if the value is not found or not a number.
+ */
 export const variableToNumber = (variableName: string, defaultValue: number = 0): number => {
   const s = ls.getItem(variableName);
   return Number(s) ? Number(s) : defaultValue;
 };
 
+/**
+ * Get the valur of a variable as a Boolean.
+ *
+ * @param variableName The name of the variable.
+ *
+ * @returns Returns True only if the value is "1".
+ */
 export const variableToBool = (variableName: string): boolean => {
   return ls.getItem(variableName) === "1";
 };
 
+/**
+ * Get the value of a variable as a List of strings.
+ *
+ * @param variableName The name of the variable.
+ */
 export const variableToList = (variableName: string): string[] => {
   const s = variable(variableName);
   return s
@@ -367,7 +434,19 @@ export const variableToList = (variableName: string): string[] => {
     : [];
 };
 
+/**
+ * Get the value of a variable as an Object.
+ *
+ * @param variableName The name of the variable.
+ */
 export function variableToObject(variableName: Variable): object;
+/**
+ * Assuming the variable value can be parsed as JSON, sets one property of the Object.
+ *
+ * @param variableName The name of the variable.
+ * @param property The property of the Object.
+ * @param value The new property value.
+ */
 export function variableToObject(variableName: Variable, property: string, value?: any): void;
 export function variableToObject(variableName: Variable, property?: string, value?: any) {
   const object = JSON.parse(variable(variableName) || "{}");
@@ -457,12 +536,18 @@ export const commandFriendlyUserId = (userId: ChatID, minusSubstitute: string = 
   return s;
 };
 
+/**
+ * Callback method for a command that respons with the current uptime of the bot and OS.
+ */
 export const defaultCommandUptime = async (msg: TelegramBot.Message) => {
   return Promise.all([getDurationString(startTime), getDurationString(os.uptime() * 1000)]).then(([s1, s2]) =>
     sendTo(msg.chat.id, `Bot uptime: ${s1}\nOS uptime: ${s2}`)
   );
 };
 
+/**
+ * Callback method for a command that respons with the IP address(es) of the bot.
+ */
 export const defaultCommandIP = async (msg: TelegramBot.Message) => {
   const ifaces = os.networkInterfaces();
   let ips = "";
@@ -553,6 +638,12 @@ export const defaultCommandVar = (variables?: Variable[]) => {
   };
 };
 
+/**
+ * Creates a callback method for a command that sends a message to a specific chat. The command is expected to be used like "/command_CHATID <message>". The received message will look like "<header>\n<message>\n<footer>".
+ *
+ * @param header The header to use.
+ * @param footer The footer to use.
+ */
 export const defaultCommandSendTo = (header?: string, footer?: string) => {
   return (msg: TelegramBot.Message) => {
     const text = msg
@@ -586,6 +677,13 @@ export const defaultCommandSendTo = (header?: string, footer?: string) => {
   };
 };
 
+/**
+ * Creates a callback method for a command that let's a user send a message to all members of a group. It is used by writing the message after the command, i.e. "/command <message>".
+ *
+ * @param groupName The name of the group to send the message to.
+ * @param emptyResponse The response to the user if the command is used without a message.
+ * @param messageFormatter Function that formats the message to be sent. Can be used to for example add a header or footer to the message.
+ */
 export const defaultCommandSendToGroup = (
   groupName: Group,
   emptyResponse: string,
@@ -654,9 +752,19 @@ export const defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
   return sendTo(msg.chat.id, s);
 };
 
+/**
+ * Creates a callback method for a command that requests access to a group of another group.
+ *
+ * @param requestFor The group that the request is for.
+ * @param sendRequestTo The group that receives the request.
+ * @param response The response to send to the user directly after sending the request.
+ * @param toggleCommand The command that can be used to grant access to the group in question. The command need to look like "/command_CHATID".
+ */
 export const defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, response: string, toggleCommand: Command) => {
   return (msg: TelegramBot.Message) => {
-    sendTo(msg.chat.id, response);
+    if (response) {
+      sendTo(msg.chat.id, response);
+    }
     sendToGroup(
       sendRequestTo,
       `<b>Request for group <i>${requestFor}</i>:</b>\n - ` +
@@ -694,10 +802,18 @@ export const defaultCommandToggle = (requestFor: Group, response: string) => {
   };
 };
 
-export const defaultCommandStart = (response: string, addToGroup: Group, alertGroup: Group, alertMessage?: string) => {
+/**
+ * Created a callback method for a simple /start command. A response is sent to the chat, and the chat ID is saved to a group. Another group can also be notified of this.
+ *
+ * @param response The respone to send to the user.
+ * @param addToGroup The group the user should be added to when using the command for the first time.
+ * @param alertGroup The group to alert.
+ * @param alertMessage The alert message. Using "$CHATID" and "$INFO" in the alert message will replace those tags with the chat ID and info about the user respectively.
+ */
+export const defaultCommandStart = (response: string, addToGroup: Group, alertGroup?: Group, alertMessage?: string) => {
   return (msg: TelegramBot.Message) => {
     sendTo(msg.chat.id, response, "HTML");
-    if (addUserIdToGroup(addToGroup, msg.chat.id)) {
+    if (addUserIdToGroup(addToGroup, msg.chat.id) && alertGroup) {
       const message = alertMessage ? alertMessage : `<b>Chat $CHATID has used the start command!</b>\n$INFO`;
 
       sendToGroup(
