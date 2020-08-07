@@ -9,8 +9,7 @@ import sanitizeHtml from "sanitize-html";
  * @todo
  * - Command allowed for multiple groups?
  * - Add support for command@BotName
- * - Re-add groups variable for group existense checks
- * - Fix "hide"
+ * - longNameFromUser should work for Chats as well.
  */
 
 export interface IBotHelperInit {
