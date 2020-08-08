@@ -240,6 +240,14 @@ export const longNameFromUser = (user: TelegramBot.User | TelegramBot.Chat): str
   return name ? name : user.username!;
 };
 
+export const getCommand = (msg: TelegramBot.Message) => {
+  if (!msg.entities || msg.entities[0].offset !== 0 || msg.entities[0].type !== "bot_command") {
+    return;
+  }
+
+  return msg.text!.slice(0, msg.entities[0].length).split("@")[0];
+}
+
 export const getArguments = (text?: string): string[] => {
   if (text) {
     return text
