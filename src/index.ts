@@ -9,7 +9,6 @@ import sanitizeHtml from "sanitize-html";
  * @todo
  * - Command allowed for multiple groups?
  * - Add support for command@BotName
- * - longNameFromUser should work for Chats as well.
  */
 
 export interface IBotHelperInit {
@@ -65,8 +64,16 @@ let uVars: Variable[] = [];
 let gVars: Variable[] = [];
 let commandLogPath = "./logs/commands.log";
 
-const commandRegExp = (c: IBotHelperCommand): RegExp => {
-  return c.matchBeginningOnly ? new RegExp(`^/${c.command}`) : new RegExp(`^/${c.command}\\b`);
+/**
+ * Creates a RegExp for a command.
+ *
+ * @param c Command in question.
+ * @param botName Name of the TelegramBot.
+ */
+export const commandRegExp = (c: IBotHelperCommand, botName: string): RegExp => {
+  return c.matchBeginningOnly
+    ? new RegExp(`^/${c.command}[a-zA-Z0-9_]*(?:$|@${botName}\\b|[^a-zA-Z0-9_@])`)
+    : new RegExp(`^/${c.command}(?:$|@${botName}\\b|[^a-zA-Z0-9_@])`);
 };
 
 /**
@@ -134,49 +141,51 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     commands = initWith.commands;
   }
 
-  commands.forEach(async c => {
-    bot.onText(commandRegExp(c), msg => {
-      fs.appendFile(commandLogPath, `${Date.now()};/${c.command};${msg.from!.id};${msg.from!.username}\n`, e => {
-        if (e) {
-          sendError(e);
+  bot.getMe().then(user => {
+    commands.forEach(async c => {
+      bot.onText(commandRegExp(c, user.username!), msg => {
+        fs.appendFile(commandLogPath, `${Date.now()};/${c.command};${msg.from!.id};${msg.from!.username}\n`, e => {
+          if (e) {
+            sendError(e);
+          }
+        });
+
+        console.log(`User ${msg.from!.id} used command /${c.command}.`);
+
+        if (!isInGroup(errorGroup, msg.chat.id) && isInGroup(deactivatedCommands, `/${c}`)) {
+          sendTo(msg.chat.id, "This command has been deactivated.");
+          console.log(`Command is deactivated.`);
+          return;
         }
+
+        if (c.group && !isInGroup(c.group, msg.chat.id)) {
+          sendTo(
+            msg.chat.id,
+            c.accessDeniedMessage
+              ? c.accessDeniedMessage
+              : initWith.defaultAccessDeniedMessage
+              ? initWith.defaultAccessDeniedMessage
+              : "You dont have access to this command."
+          );
+          console.log(`User not in group ${c.group}.`);
+          return;
+        }
+
+        if (c.privateOnly && msg.chat.type !== "private") {
+          sendTo(
+            msg.chat.id,
+            initWith.defaultPrivateOnlyMessage ? initWith.defaultPrivateOnlyMessage : "The command can only be used in a private chat."
+          );
+          console.log(`Not in private chat.`);
+          return;
+        }
+
+        console.log("Callback called.");
+        if (c.chatAcion) {
+          bot.sendChatAction(msg.chat.id, c.chatAcion);
+        }
+        return c.callback(msg);
       });
-
-      console.log(`User ${msg.from!.id} used command /${c.command}.`);
-
-      if (!isInGroup(errorGroup, msg.chat.id) && isInGroup(deactivatedCommands, `/${c}`)) {
-        sendTo(msg.chat.id, "This command has been deactivated.");
-        console.log(`Command is deactivated.`);
-        return;
-      }
-
-      if (c.group && !isInGroup(c.group, msg.chat.id)) {
-        sendTo(
-          msg.chat.id,
-          c.accessDeniedMessage
-            ? c.accessDeniedMessage
-            : initWith.defaultAccessDeniedMessage
-            ? initWith.defaultAccessDeniedMessage
-            : "You dont have access to this command."
-        );
-        console.log(`User not in group ${c.group}.`);
-        return;
-      }
-
-      if (c.privateOnly && msg.chat.type !== "private") {
-        sendTo(
-          msg.chat.id,
-          initWith.defaultPrivateOnlyMessage ? initWith.defaultPrivateOnlyMessage : "The command can only be used in a private chat."
-        );
-        console.log(`Not in private chat.`);
-        return;
-      }
-
-      console.log("Callback called.");
-      if (c.chatAcion) {
-        bot.sendChatAction(msg.chat.id, c.chatAcion);
-      }
-      return c.callback(msg);
     });
   });
 
@@ -507,8 +516,15 @@ export const toggleUserIdInGroup = (groupName: Group, userId: ChatID): boolean =
   return true;
 };
 
+/**
+ * Returns the user/chat ID inside commands that have a user/chat ID appended to them, for example "/command_1234567890" or "/command_1234567890@MyBot".
+ *
+ * @param command The full command.
+ * @param splitAt The character that separates the command and ID.
+ * @param minusSubstitute If the ID is of a group chat, which have negative chat IDs, the minus symbol need to be removed because Telegram commands can not have hyphens in them. Default substitue is "m" as in minus.
+ */
 export const userIdFromCommand = (command: Command, splitAt: string = "_", minusSubstitute: string = "m"): ChatID | undefined => {
-  let arg = command.split(splitAt)[1];
+  let arg = command.split("@")[0].split(splitAt)[1];
   if (!arg.length) {
     return undefined;
   }

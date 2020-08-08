@@ -20,7 +20,19 @@ import {
   userIdFromCommand,
   commandFriendlyUserId,
   longNameFromUser,
+  commandRegExp,
+  IBotHelperCommand,
 } from "../index";
+
+jest.mock("node-telegram-bot-api", () => {
+  return jest.fn().mockImplementation(() => {
+    return {
+      getMe: (): Promise<TelegramBot.User> => { return new Promise(resolve => resolve({ username: "botname" } as TelegramBot.User)); },
+      getChat: jest.fn(),
+      sendMessage: jest.fn(),
+    };
+  });
+});
 
 initBot({
   telegramBotToken: "token",
@@ -35,13 +47,11 @@ const bot = props.telegramBot;
 const ls = props.localStorage;
 
 test("properties", () => {
-  expect(bot).toEqual(expect.any(TelegramBot));
+  // expect(bot).toEqual(expect.any(TelegramBot));
   expect(ls).toEqual(expect.any(LocalStorage));
   expect(props.globalVariables).toEqual(["testVariable"]);
   expect(props.userVariables).toEqual(["var1", "var2"]);
 });
-
-jest.mock("node-telegram-bot-api");
 
 test("variable", () => {
   ls.setItem("v1", "123");
@@ -264,4 +274,119 @@ test("longNameFromUser no username", () => {
 
   u.last_name = "LASTNAME";
   expect(longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME");
+});
+
+test("regexp", () => {
+  const cmd: IBotHelperCommand = {
+    command: "cmd",
+    callback: () => {},
+  }
+
+  const regexp = commandRegExp(cmd, "botname");
+
+  let res = true;
+
+  [
+    "/cmd",
+    "/cmd text",
+    "/cmd\ntext",
+    "/cmd,text",
+    "/cmd.text",
+    "/cmd&text",
+    "/cmd#text",
+    "/cmd$text",
+    "/cmd'text",
+    "/cmd\"text",
+    "/cmd@botname",
+    "/cmd@botname text",
+    "/cmd@botname\ntext",
+    "/cmd@botname,text",
+    "/cmd@botname.text",
+    "/cmd@botname&text",
+    "/cmd@botname#text",
+    "/cmd@botname$text",
+    "/cmd@botname'text",
+    "/cmd@botname\"text",
+    "/cmd@botname@",
+  ].forEach(s => {
+    const b = regexp.test(s);
+    if (!b) { console.log(s); }
+    res = res && b;
+  });
+  expect(res).toBe(true);
+
+  [
+    "/cmda",
+    "/cmdA",
+    "/cmd0",
+    "/cmd_",
+    "/cmd@",
+    "/cmd@notbotname",
+    "cmd",
+    "text /cmd",
+    " /cmd",
+  ].forEach(s => {
+    const b = !regexp.test(s);
+    if (!b) { console.log(s); }
+    res = res && b;
+  });
+  expect(res).toBe(true);
+});
+
+test("regexp matchBeginningOnly", () => {
+  const cmd: IBotHelperCommand = {
+    command: "cmd",
+    callback: () => {},
+    matchBeginningOnly: true,
+  }
+
+  const regexp = commandRegExp(cmd, "botname");
+
+  let res = true;
+
+  [
+    "/cmd",
+    "/cmd text",
+    "/cmd\ntext",
+    "/cmd,text",
+    "/cmd.text",
+    "/cmd&text",
+    "/cmd#text",
+    "/cmd$text",
+    "/cmd'text",
+    "/cmd\"text",
+    "/cmd@botname",
+    "/cmd@botname text",
+    "/cmd@botname\ntext",
+    "/cmd@botname,text",
+    "/cmd@botname.text",
+    "/cmd@botname&text",
+    "/cmd@botname#text",
+    "/cmd@botname$text",
+    "/cmd@botname'text",
+    "/cmd@botname\"text",
+    "/cmd@botname@",
+    "/cmda",
+    "/cmdA",
+    "/cmd0",
+    "/cmd_",
+  ].forEach(s => {
+    const b = regexp.test(s);
+    if (!b) { console.log(s); }
+    res = res && b;
+  });
+  expect(res).toBe(true);
+
+  [
+    "/cmd@",
+    "/cmd@notbotname",
+    "cmd",
+    "text /cmd",
+    " /cmd",
+  ].forEach(s => {
+    const b = !regexp.test(s);
+    if (!b) { console.log(s); }
+    res = res && b;
+  });
+  expect(res).toBe(true);
 });
