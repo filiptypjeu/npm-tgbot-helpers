@@ -27,7 +27,9 @@ import {
 jest.mock("node-telegram-bot-api", () => {
   return jest.fn().mockImplementation(() => {
     return {
-      getMe: (): Promise<TelegramBot.User> => { return new Promise(resolve => resolve({ username: "botname" } as TelegramBot.User)); },
+      getMe: (): Promise<TelegramBot.User> => {
+        return new Promise(resolve => resolve({ username: "botname" } as TelegramBot.User));
+      },
       getChat: jest.fn(),
       sendMessage: jest.fn(),
     };
@@ -291,7 +293,7 @@ test("regexp", () => {
   const cmd: IBotHelperCommand = {
     command: "cmd",
     callback: () => {},
-  }
+  };
 
   const regexp = commandRegExp(cmd, "botname");
 
@@ -307,7 +309,7 @@ test("regexp", () => {
     "/cmd#text",
     "/cmd$text",
     "/cmd'text",
-    "/cmd\"text",
+    '/cmd"text',
     "/cmd@botname",
     "/cmd@botname text",
     "/cmd@botname\ntext",
@@ -317,28 +319,22 @@ test("regexp", () => {
     "/cmd@botname#text",
     "/cmd@botname$text",
     "/cmd@botname'text",
-    "/cmd@botname\"text",
+    '/cmd@botname"text',
     "/cmd@botname@",
   ].forEach(s => {
     const b = regexp.test(s);
-    if (!b) { console.log(s); }
+    if (!b) {
+      console.log(s);
+    }
     res = res && b;
   });
   expect(res).toBe(true);
 
-  [
-    "/cmda",
-    "/cmdA",
-    "/cmd0",
-    "/cmd_",
-    "/cmd@",
-    "/cmd@notbotname",
-    "cmd",
-    "text /cmd",
-    " /cmd",
-  ].forEach(s => {
+  ["/cmda", "/cmdA", "/cmd0", "/cmd_", "/cmd@", "/cmd@notbotname", "cmd", "text /cmd", " /cmd"].forEach(s => {
     const b = !regexp.test(s);
-    if (!b) { console.log(s); }
+    if (!b) {
+      console.log(s);
+    }
     res = res && b;
   });
   expect(res).toBe(true);
@@ -349,7 +345,7 @@ test("regexp matchBeginningOnly", () => {
     command: "cmd",
     callback: () => {},
     matchBeginningOnly: true,
-  }
+  };
 
   const regexp = commandRegExp(cmd, "botname");
 
@@ -365,7 +361,7 @@ test("regexp matchBeginningOnly", () => {
     "/cmd#text",
     "/cmd$text",
     "/cmd'text",
-    "/cmd\"text",
+    '/cmd"text',
     "/cmd@botname",
     "/cmd@botname text",
     "/cmd@botname\ntext",
@@ -375,7 +371,7 @@ test("regexp matchBeginningOnly", () => {
     "/cmd@botname#text",
     "/cmd@botname$text",
     "/cmd@botname'text",
-    "/cmd@botname\"text",
+    '/cmd@botname"text',
     "/cmd@botname@",
     "/cmda",
     "/cmdA",
@@ -383,20 +379,18 @@ test("regexp matchBeginningOnly", () => {
     "/cmd_",
   ].forEach(s => {
     const b = regexp.test(s);
-    if (!b) { console.log(s); }
+    if (!b) {
+      console.log(s);
+    }
     res = res && b;
   });
   expect(res).toBe(true);
 
-  [
-    "/cmd@",
-    "/cmd@notbotname",
-    "cmd",
-    "text /cmd",
-    " /cmd",
-  ].forEach(s => {
+  ["/cmd@", "/cmd@notbotname", "cmd", "text /cmd", " /cmd"].forEach(s => {
     const b = !regexp.test(s);
-    if (!b) { console.log(s); }
+    if (!b) {
+      console.log(s);
+    }
     res = res && b;
   });
   expect(res).toBe(true);
