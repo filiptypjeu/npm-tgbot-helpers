@@ -225,11 +225,16 @@ export const msgInfoToString = (msg: TelegramBot.Message): string[] => {
   ];
 };
 
-export const longNameFromUser = (user: TelegramBot.User): string => {
+export const longNameFromUser = (user: TelegramBot.User | TelegramBot.Chat): string => {
+  const title = (user as TelegramBot.Chat).title;
+  if (title) {
+    return title;
+  }
+
   const name = `${user.first_name || ""} ${user.last_name || ""}`.trim();
 
   if (name && user.username) {
-    return `${user.username} (${name})`;
+    return `${name} (${user.username})`;
   }
 
   return name ? name : user.username!;

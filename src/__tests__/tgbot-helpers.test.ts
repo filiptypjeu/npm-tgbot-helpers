@@ -259,10 +259,10 @@ test("longNameFromUser with username", () => {
   expect(longNameFromUser(u)).toEqual("USERNAME");
 
   u.first_name = "FIRSTNAME";
-  expect(longNameFromUser(u)).toEqual("USERNAME (FIRSTNAME)");
+  expect(longNameFromUser(u)).toEqual("FIRSTNAME (USERNAME)");
 
   u.last_name = "LASTNAME";
-  expect(longNameFromUser(u)).toEqual("USERNAME (FIRSTNAME LASTNAME)");
+  expect(longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME (USERNAME)");
 });
 
 test("longNameFromUser no username", () => {
@@ -274,6 +274,17 @@ test("longNameFromUser no username", () => {
 
   u.last_name = "LASTNAME";
   expect(longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME");
+});
+
+test("longNameFromUser with title", () => {
+  const u = {
+    title: "TITLE",
+    first_name: "FIRSTNAME",
+    last_name: "LASTNAME",
+    username: "USERNAME",
+  } as TelegramBot.Chat;
+
+  expect(longNameFromUser(u)).toEqual("TITLE");
 });
 
 test("regexp", () => {
