@@ -148,13 +148,47 @@ test("getArguments", () => {
   expect(getArguments("/test\na     b   \n\n   \n c   \n  ")).toEqual(["a", "b", "c"]);
 });
 
-test("userIdFromCommand", () => {
-  expect(userIdFromCommand("/command_12345")).toEqual(12345);
-  expect(userIdFromCommand("/command_m12345")).toEqual(-12345);
-  expect(userIdFromCommand("/command_12345m")).toEqual(undefined);
-  expect(userIdFromCommand("/command_12345", "3")).toEqual(45);
-  expect(userIdFromCommand("/commands_12345", "3", "4")).toEqual(-5);
-  expect(userIdFromCommand("/commands_123.45")).toEqual(undefined);
+test("userIdFromCommand and getCommand", () => {
+  const msg = { text: "/command_12345", entities: [{ type: "bot_command", offset: 0, length: 14 }] } as TelegramBot.Message;
+
+  expect(userIdFromCommand(msg)).toEqual(12345);
+
+  msg.text = "/command_12345 more text";
+  msg.entities![0]!.length = msg.text.split(" ")[0].length;
+  expect(userIdFromCommand(msg)).toEqual(12345);
+
+  msg.text = "/command_12345@bot some text";
+  msg.entities![0]!.length = msg.text.split(" ")[0].length;
+  expect(userIdFromCommand(msg)).toEqual(12345);
+
+  msg.text = "/command_m12345@bot some text";
+  msg.entities![0]!.length = msg.text.split(" ")[0].length;
+  expect(userIdFromCommand(msg)).toEqual(-12345);
+
+  msg.text = "/command_12345";
+  msg.entities![0]!.length = msg.text.split(" ")[0].length;
+  expect(userIdFromCommand(msg, "3", "4")).toEqual(-5);
+
+  msg.text = "/commandAB12345@bot some text";
+  msg.entities![0]!.length = msg.text.split(" ")[0].length;
+  expect(userIdFromCommand(msg, "A", "B")).toEqual(-12345);
+
+  msg.text = "/commandA12345@bot some text";
+  msg.entities![0]!.length = msg.text.split(" ")[0].length;
+  expect(userIdFromCommand(msg)).toEqual(undefined);
+
+  msg.text = "/command_abc";
+  msg.entities![0]!.length = msg.text.split(" ")[0].length;
+  expect(userIdFromCommand(msg)).toEqual(undefined);
+
+  msg.text = "/command_12.345";
+  msg.entities![0]!.length = msg.text.split(" ")[0].length;
+  expect(userIdFromCommand(msg)).toEqual(undefined);
+
+  msg.text = "/command_12345";
+  msg.entities![0]!.length = msg.text.split(" ")[0].length;
+  msg.entities![0]!.offset = 1;
+  expect(userIdFromCommand(msg)).toEqual(undefined);
 });
 
 test("commandFriendlyUserId", () => {

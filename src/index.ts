@@ -240,12 +240,12 @@ export const longNameFromUser = (user: TelegramBot.User | TelegramBot.Chat): str
   return name ? name : user.username!;
 };
 
-export const getCommand = (msg: TelegramBot.Message) => {
+export const getCommand = (msg: TelegramBot.Message): Command => {
   if (!msg.entities || msg.entities[0].offset !== 0 || msg.entities[0].type !== "bot_command") {
-    return;
+    return "";
   }
 
-  return msg.text!.slice(0, msg.entities[0].length).split("@")[0];
+  return msg.text!.slice(1, msg.entities[0].length).split("@")[0];
 };
 
 export const getArguments = (text?: string): string[] => {
@@ -536,10 +536,10 @@ export const toggleUserIdInGroup = (groupName: Group, userId: ChatID): boolean =
  * @param splitAt The character that separates the command and ID.
  * @param minusSubstitute If the ID is of a group chat, which have negative chat IDs, the minus symbol need to be removed because Telegram commands can not have hyphens in them. Default substitue is "m" as in minus.
  */
-export const userIdFromCommand = (command: Command, splitAt: string = "_", minusSubstitute: string = "m"): ChatID | undefined => {
-  let arg = command.split("@")[0].split(splitAt)[1];
-  if (!arg.length) {
-    return undefined;
+export const userIdFromCommand = (msg: TelegramBot.Message, splitAt: string = "_", minusSubstitute: string = "m"): ChatID | undefined => {
+  let arg = getCommand(msg).split(splitAt)[1];
+  if (!arg) {
+    return;
   }
 
   if (arg[0] === minusSubstitute) {
@@ -552,7 +552,7 @@ export const userIdFromCommand = (command: Command, splitAt: string = "_", minus
     return userId;
   }
 
-  return undefined;
+  return;
 };
 
 export const commandFriendlyUserId = (userId: ChatID, minusSubstitute: string = "m"): string => {
@@ -684,7 +684,7 @@ export const defaultCommandSendTo = (header?: string, footer?: string) => {
       return;
     }
 
-    const chatId = userIdFromCommand(msg.text!.split(" ")[0]);
+    const chatId = userIdFromCommand(msg);
     if (!chatId) {
       sendTo(msg.chat.id, `No chat ID found...`);
       return;
@@ -814,7 +814,7 @@ export const defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, r
  */
 export const defaultCommandToggle = (requestFor: Group, response: string) => {
   return (msg: TelegramBot.Message) => {
-    const userId = userIdFromCommand(msg.text!.split(" ")[0]);
+    const userId = userIdFromCommand(msg);
     if (!userId) {
       sendTo(msg.chat.id, `Use ${msg.text!.split(" ")[0].split("_")[0]}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`, "HTML");
       return;
