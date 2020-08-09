@@ -13,7 +13,7 @@
         "postversion": "git push && git push --tags",
         "prepare": "npm run build",
         "prepublishOnly": "npm test && npm run lint",
-        "preversion": "npm run lint",
+        "preversion": "npm run format && npm run lint",
         "test": "jest --config jestconfig.json",
         "version": "npm run format && git add -A src"
     },
