@@ -292,13 +292,13 @@ test("longNameFromUser with username", () => {
     username: "USERNAME",
   } as TelegramBot.User;
 
-  expect(longNameFromUser(u)).toEqual("USERNAME");
+  expect(longNameFromUser(u)).toEqual("@USERNAME");
 
   u.first_name = "FIRSTNAME";
-  expect(longNameFromUser(u)).toEqual("FIRSTNAME (USERNAME)");
+  expect(longNameFromUser(u)).toEqual("FIRSTNAME @USERNAME");
 
   u.last_name = "LASTNAME";
-  expect(longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME (USERNAME)");
+  expect(longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME @USERNAME");
 });
 
 test("longNameFromUser no username", () => {
