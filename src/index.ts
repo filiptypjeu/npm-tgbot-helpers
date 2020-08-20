@@ -231,13 +231,12 @@ export const longNameFromUser = (user: TelegramBot.User | TelegramBot.Chat): str
     return title;
   }
 
-  const a: string[] = [
-    user.first_name || "",
-    user.last_name || "",
-    user.username ? "@" + user.username : "",
-  ];
+  const a: string[] = [user.first_name || "", user.last_name || "", user.username ? "@" + user.username : ""];
 
-  return a.filter(s => s).join(" ").trim();
+  return a
+    .filter(s => s)
+    .join(" ")
+    .trim();
 };
 
 export const getCommand = (msg: TelegramBot.Message): Command => {
