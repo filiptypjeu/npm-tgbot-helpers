@@ -155,7 +155,10 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
 
         // Check if the command is deactivated
         if (!isInGroup(errorGroup, msg.chat.id) && isInGroup(deactivatedCommands, `/${c}`)) {
-          sendTo(msg.chat.id, initWith.defaultPrivateOnlyMessage ? initWith.defaultPrivateOnlyMessage : "This command has been deactivated.");
+          sendTo(
+            msg.chat.id,
+            initWith.defaultPrivateOnlyMessage ? initWith.defaultPrivateOnlyMessage : "This command has been deactivated."
+          );
           console.log(`Command is deactivated.`);
           return;
         }
@@ -767,7 +770,11 @@ export const defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
   let s = "";
 
   if (!arg) {
-    s = `Use /${getCommand(msg)} /&lt;command&gt; to deactivate/activate command.\n\n${deactivated.length === 0 ? "No deactivated commands found." : `<b>Deactivated commands:</b>\n${deactivated.map((v, i) => `${i} ${v}`).join("\n")}`}`;
+    s = `Use /${getCommand(msg)} /&lt;command&gt; to deactivate/activate command.\n\n${
+      deactivated.length === 0
+        ? "No deactivated commands found."
+        : `<b>Deactivated commands:</b>\n${deactivated.map((v, i) => `${i} ${v}`).join("\n")}`
+    }`;
   } else if (Number(arg) < deactivated.length) {
     toggleUserIdInGroup(deactivatedCommands, deactivated[Number(arg)]);
     s = `Command ${deactivated[Number(arg)]} has been reactivated!`;
