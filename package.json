@@ -43,7 +43,7 @@
         "node-telegram-bot-api": "^0.40.0",
         "read-last-lines": "^1.7.2",
         "request-promise": "^4.2.5",
-        "sanitize-html": "^1.27.2"
+        "sanitize-html": "^2.3.2"
     },
     "files": [
         "dist/**/*"
