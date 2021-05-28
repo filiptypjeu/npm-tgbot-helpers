@@ -1,14 +1,13 @@
-import fs from "fs";
 import { LocalStorage } from "node-localstorage";
 import TelegramBot, { Message, ParseMode } from "node-telegram-bot-api";
 import os from "os";
 import readLastLines from "read-last-lines";
 import sanitizeHtml from "sanitize-html";
+import { Logger } from "log4js";
 
 /**
  * @todo
  * - Command allowed for multiple groups?
- * - Add support for command@BotName
  */
 
 export interface IBotHelperInit {
@@ -20,7 +19,9 @@ export interface IBotHelperInit {
   commands?: IBotHelperCommand[];
   groups?: string[];
   errorGroup?: string;
-  commandLogPath?: string;
+  commandLogger?: Logger;
+  botLogger?: Logger;
+  errorLogger?: Logger;
   defaultAccessDeniedMessage?: string;
   defaultPrivateOnlyMessage?: string;
   defaultCommandDeactivatedMessage?: string;
@@ -63,7 +64,9 @@ let groups: Group[] = [];
 let errorGroup: Group = "";
 let uVars: Variable[] = [];
 let gVars: Variable[] = [];
-let commandLogPath = "./logs/commands.log";
+let commandLogger: Logger | undefined;
+let botLogger: Logger | undefined;
+let errorLogger: Logger | undefined;
 
 /**
  * Creates a RegExp for a command.
@@ -123,9 +126,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   bot = new TelegramBot(initWith.telegramBotToken, { polling: true });
   ls = new LocalStorage(initWith.localStoragePath);
 
-  if (initWith.groups) {
-    groups = initWith.groups;
-  }
+  groups = initWith.groups || [];
   if (initWith.errorGroup) {
     errorGroup = initWith.errorGroup;
   }
@@ -135,23 +136,17 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   if (initWith.userVariables) {
     uVars = initWith.userVariables;
   }
-  if (initWith.commandLogPath) {
-    commandLogPath = initWith.commandLogPath;
-  }
   if (initWith.commands) {
     commands = initWith.commands;
   }
+  commandLogger = initWith.commandLogger;
+  botLogger = initWith.botLogger;
+  errorLogger = initWith.errorLogger;
 
   bot.getMe().then(user => {
     commands.forEach(async c => {
       bot.onText(commandRegExp(c, user.username!), msg => {
-        fs.appendFile(commandLogPath, `${Date.now()};/${c.command};${msg.from!.id};${msg.from!.username}\n`, e => {
-          if (e) {
-            sendError(e);
-          }
-        });
-
-        console.log(`User ${msg.from!.id} used command /${c.command}.`);
+        let log = "ok";
 
         // Check if the command is deactivated
         if (!isInGroup(errorGroup, msg.chat.id) && isInGroup(deactivatedCommands, `/${c}`)) {
@@ -159,11 +154,9 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
             msg.chat.id,
             initWith.defaultPrivateOnlyMessage ? initWith.defaultPrivateOnlyMessage : "This command has been deactivated."
           );
-          console.log(`Command is deactivated.`);
-          return;
-        }
+          log = "deactivated";
 
-        if (c.group && !isInGroup(c.group, msg.chat.id)) {
+        } else if (c.group && !isInGroup(c.group, msg.chat.id)) {
           sendTo(
             msg.chat.id,
             c.accessDeniedMessage
@@ -172,31 +165,34 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
               ? initWith.defaultAccessDeniedMessage
               : "You dont have access to this command."
           );
-          console.log(`User not in group ${c.group}.`);
-          return;
-        }
+          log = "denied";
 
-        if (c.privateOnly && msg.chat.type !== "private") {
+        } else if (c.privateOnly && msg.chat.type !== "private") {
           sendTo(
             msg.chat.id,
             initWith.defaultPrivateOnlyMessage ? initWith.defaultPrivateOnlyMessage : "The command can only be used in a private chat."
           );
-          console.log(`Not in private chat.`);
+          log = "private";
+
+        }
+
+        // Log the command
+        commandLogger?.info(`${longNameFromUser(msg.from!)} : /${c.command} [${log}]`);
+
+        if (log !== "ok") {
           return;
         }
 
-        console.log("Callback called.");
         if (c.chatAcion) {
           bot.sendChatAction(msg.chat.id, c.chatAcion);
         }
+
         return c.callback(msg);
       });
     });
   });
 
-  console.log(
-    `Telegram bot initialized with ${commands.length} commands, ${groupToUserInfo.length} groups, ${gVars.length} global variables and ${uVars.length} user variables.`
-  );
+  botLogger?.info(`Telegram bot initialized with ${commands.length} commands, ${groups.length} groups, ${gVars.length} global variables and ${uVars.length} user variables.`);
 
   if (initWith.whenOnline) {
     initWith.whenOnline();
@@ -340,8 +336,7 @@ export async function sendTo(
           );
         }
       } else {
-        console.log(e.code);
-        console.log(e.response.body);
+        errorLogger?.error(e);
       }
     });
 }
@@ -389,7 +384,7 @@ export async function sendToGroup(
 }
 
 export const sendError = async (e: any) => {
-  console.error(e);
+  botLogger?.error(e);
   return sendToGroup(errorGroup, e.toString() ? e.toString().slice(0, 3000) : "Error...");
 };
 
