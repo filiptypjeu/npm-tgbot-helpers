@@ -28,7 +28,7 @@ jest.mock("node-telegram-bot-api", () => {
   return jest.fn().mockImplementation(() => {
     return {
       getMe: (): Promise<TelegramBot.User> => {
-        return new Promise(resolve => resolve({ username: "botname" } as TelegramBot.User));
+        return new Promise((resolve) => resolve({ username: "botname" } as TelegramBot.User));
       },
       getChat: jest.fn(),
       sendMessage: jest.fn(),
@@ -355,7 +355,7 @@ test("regexp", () => {
     "/cmd@botname'text",
     '/cmd@botname"text',
     "/cmd@botname@",
-  ].forEach(s => {
+  ].forEach((s) => {
     const b = regexp.test(s);
     if (!b) {
       console.log(s);
@@ -364,7 +364,7 @@ test("regexp", () => {
   });
   expect(res).toBe(true);
 
-  ["/cmda", "/cmdA", "/cmd0", "/cmd_", "/cmd@", "/cmd@notbotname", "cmd", "text /cmd", " /cmd"].forEach(s => {
+  ["/cmda", "/cmdA", "/cmd0", "/cmd_", "/cmd@", "/cmd@notbotname", "cmd", "text /cmd", " /cmd"].forEach((s) => {
     const b = !regexp.test(s);
     if (!b) {
       console.log(s);
@@ -411,7 +411,7 @@ test("regexp matchBeginningOnly", () => {
     "/cmdA",
     "/cmd0",
     "/cmd_",
-  ].forEach(s => {
+  ].forEach((s) => {
     const b = regexp.test(s);
     if (!b) {
       console.log(s);
@@ -420,7 +420,7 @@ test("regexp matchBeginningOnly", () => {
   });
   expect(res).toBe(true);
 
-  ["/cmd@", "/cmd@notbotname", "cmd", "text /cmd", " /cmd"].forEach(s => {
+  ["/cmd@", "/cmd@notbotname", "cmd", "text /cmd", " /cmd"].forEach((s) => {
     const b = !regexp.test(s);
     if (!b) {
       console.log(s);
