@@ -109,7 +109,7 @@ const getDurationString = (value: number | Date): string => {
  */
 const groupByGroup = (cmds: IBotHelperCommand[]) => {
   const m = new Map<string, IBotHelperCommand[]>();
-  cmds.forEach((cmd) => {
+  cmds.forEach(cmd => {
     const g = cmd.group || "";
     m.set(g, (m.get(g) || []).concat(cmd));
   });
@@ -143,9 +143,9 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   botLogger = initWith.botLogger;
   errorLogger = initWith.errorLogger;
 
-  bot.getMe().then((user) => {
-    commands.forEach(async (c) => {
-      bot.onText(commandRegExp(c, user.username!), (msg) => {
+  bot.getMe().then(user => {
+    commands.forEach(async c => {
+      bot.onText(commandRegExp(c, user.username!), msg => {
         let log = "ok";
 
         // Check if the command is deactivated
@@ -234,7 +234,7 @@ export const longNameFromUser = (user: TelegramBot.User | TelegramBot.Chat): str
   const a: string[] = [user.first_name || "", user.last_name || "", user.username ? "@" + user.username : ""];
 
   return a
-    .filter((s) => s)
+    .filter(s => s)
     .join(" ")
     .trim();
 };
@@ -253,7 +253,7 @@ export const getArguments = (text?: string): string[] => {
       .split("\n")
       .join(" ")
       .split(" ")
-      .filter((s) => s)
+      .filter(s => s)
       .slice(1);
   }
   return [];
@@ -305,7 +305,7 @@ export async function sendTo(
 
   bot
     .sendMessage(userId, sendOptions.parse_mode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i"] }) : text, sendOptions)
-    .catch(async (e) => {
+    .catch(async e => {
       if (e.code === "ETELEGRAM") {
         if (e.response.body.description === "Bad Request: message is too long") {
           const splitText = text.split("\n");
@@ -379,7 +379,7 @@ export async function sendToGroup(
           disable_notification: silent,
           disable_web_page_preview: noPreview,
         };
-  return Promise.all(variableToList(groupName).map((id) => sendTo(id, text, sendOptions)));
+  return Promise.all(variableToList(groupName).map(id => sendTo(id, text, sendOptions)));
 }
 
 export const sendError = async (e: any) => {
@@ -449,7 +449,7 @@ export const variableToList = (variableName: string): string[] => {
         .split(" ")
         .join("\n")
         .split("\n")
-        .filter((v) => v)
+        .filter(v => v)
     : [];
 };
 
@@ -491,7 +491,7 @@ export const groupToUserInfo = async (variableName: Variable, extraInfo?: string
   if (userIds.length > 0) {
     return await Promise.all(
       userIds.map(async (n, i) => {
-        return await bot.getChat(n).then((chat) => {
+        return await bot.getChat(n).then(chat => {
           return `${chat.first_name} ${chat.last_name}, ${chat.username} (ID: ${n}${
             extraInfo ? `, ${extraInfo[i] ? extraInfo[i] : "no info"}` : ""
           })`;
@@ -518,7 +518,7 @@ export const toggleUserIdInGroup = (groupName: Group, userId: ChatID): boolean =
   const userIds = variableToList(groupName);
 
   if (userIds.includes(userId.toString())) {
-    variable(groupName, userIds.filter((id) => id !== userId.toString()).join("\n"));
+    variable(groupName, userIds.filter(id => id !== userId.toString()).join("\n"));
     return false;
   }
 
@@ -578,9 +578,9 @@ export const defaultCommandIP = async (msg: TelegramBot.Message) => {
   const ifaces = os.networkInterfaces();
   let ips = "";
 
-  Object.keys(ifaces).forEach((ifname) => {
+  Object.keys(ifaces).forEach(ifname => {
     let alias = 0;
-    ifaces[ifname]!.forEach((iface) => {
+    ifaces[ifname]!.forEach(iface => {
       // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
       if (iface.family !== "IPv4" || iface.internal) {
         return;
@@ -602,7 +602,7 @@ export const defaultCommandCommands = (msg: TelegramBot.Message) => {
         msg.chat.id,
         `<b>Commands accessible to ${group ? `group <i>${group}</i>` : "everybody"}:</b>\n` +
           cmds
-            .map((cmd) => `${cmd.hide ? "(" : ""}/${cmd.command}${cmd.privateOnly ? "*" : ""}${cmd.hide ? ")" : ""}`)
+            .map(cmd => `${cmd.hide ? "(" : ""}/${cmd.command}${cmd.privateOnly ? "*" : ""}${cmd.hide ? ")" : ""}`)
             .sort()
             .join("\n"),
         "HTML"
@@ -615,8 +615,8 @@ export const defaultCommandHelp = async (msg: TelegramBot.Message) => {
   return sendTo(
     msg.chat.id,
     commands
-      .filter((cmd) => (cmd.group ? isInGroup(cmd.group, msg.chat.id) : !cmd.hide))
-      .map((cmd) => `/${cmd.command}${cmd.privateOnly ? "*" : ""}${cmd.description ? ":  " + cmd.description : ""}`)
+      .filter(cmd => (cmd.group ? isInGroup(cmd.group, msg.chat.id) : !cmd.hide))
+      .map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}${cmd.description ? ":  " + cmd.description : ""}`)
       .sort()
       .join("\n\n"),
     "HTML"
@@ -680,7 +680,7 @@ export const defaultCommandSendTo = (header?: string, footer?: string) => {
 
     bot
       .getChat(chatId)
-      .then((chat) => {
+      .then(chat => {
         sendTo(msg.chat.id, `Message sent to chat ${chatId}!`);
         sendTo(chat.id, `${header || ""}\n${text}\n${footer || ""}`.trim(), "HTML");
       })
@@ -725,8 +725,8 @@ export const defaultCommandLog = (logPath: string, keys?: string) => {
   return async (msg: TelegramBot.Message) => {
     return readLastLines
       .read(logPath, Number(getArguments(msg.text)[0]) < 50 ? Number(getArguments(msg.text)[0]) : 50)
-      .then((s) => sendTo(msg.chat.id, s ? (keys ? `<b>${keys}</b>\n${s}` : s) : `File ${logPath} is empty.`, "HTML"))
-      .catch((e) => sendError(e));
+      .then(s => sendTo(msg.chat.id, s ? (keys ? `<b>${keys}</b>\n${s}` : s) : `File ${logPath} is empty.`, "HTML"))
+      .catch(e => sendError(e));
   };
 };
 
@@ -844,7 +844,7 @@ export const defaultCommandStart = (response: string, addToGroup: Group, alertGr
           .split("$INFO")
           .join(
             msgInfoToString(msg)
-              .map((s) => " - " + s)
+              .map(s => " - " + s)
               .join("\n")
           ),
         "HTML"
@@ -860,14 +860,14 @@ export const defaultCommandGroups = () => {
     if (n >= 0 && n < groups.length) {
       const groupName = groups[n];
       groupToUserInfo(groupName)
-        .then((a) => {
+        .then(a => {
           const message =
             a.length === 0
               ? `No chats in group <i>${groupName}</i>.`
-              : `<b>Chats in group <i>${groupName}</i></b>:\n${a.map((s) => ` - ${s}`).join("\n")}`;
+              : `<b>Chats in group <i>${groupName}</i></b>:\n${a.map(s => ` - ${s}`).join("\n")}`;
           sendTo(msg.chat.id, message, "HTML");
         })
-        .catch((e) => sendError(e));
+        .catch(e => sendError(e));
     } else {
       sendTo(
         msg.chat.id,
