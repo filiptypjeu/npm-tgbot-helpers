@@ -36,6 +36,14 @@ export class Group {
   }
 
   /**
+   * Remove all members of this group.
+   */
+  public reset = (): Group => {
+    this.ls.setItem(this.variableName, "");
+    return this;
+  }
+
+  /**
    * Add a chat/user to this group.
    *
    * @returns true if chat/user was added to the group.

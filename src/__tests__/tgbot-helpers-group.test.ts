@@ -70,3 +70,10 @@ test("check if users are members (number)", () => {
   expect(group2.isMember(Infinity)).toEqual(false);
   expect(group2.isMember(NaN)).toEqual(false);
 });
+
+test("test reset", () => {
+  group1.reset();
+  group2.reset();
+  expect(group2.members).toEqual([]);
+  expect(group2.members).toEqual([]);
+});
