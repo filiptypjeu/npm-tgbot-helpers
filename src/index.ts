@@ -31,8 +31,29 @@ export interface IBotHelperInit {
   globalVariables?: string[];
   userVariables?: string[];
   commands?: IBotHelperCommand[];
+  defaultCommands?: {
+    init?: Command;
+    uptime?: Command;
+    userInfo?: Command;
+    deactivate?: Command;
+    help?: Command;
+    kill?: Command;
+    ip?: Command;
+    var?: Command;
+    groups?: Command;
+    commands?: {
+      command: Command,
+      availableFor?: Group,
+      description?: string,
+    },
+    start?: {
+      greeting: string;
+      addToGroup?: Group;
+      description?: string;
+    }
+  },
   groups?: (Group | IGroupExtended)[];
-  sudoGroup?: Group;
+  sudoGroup: Group;
   commandLogger?: Logger;
   botLogger?: Logger;
   errorLogger?: Logger;
@@ -74,7 +95,7 @@ const startTime = new Date();
 let deactivatedCommands: Group;
 let commands: IBotHelperCommand[] = [];
 const groups: Group[] = [];
-let sudoGroup: Group | undefined;
+let sudoGroup: Group;
 let uVars: Variable[] = [];
 let gVars: Variable[] = [];
 let commandLogger: Logger | undefined;
@@ -165,6 +186,115 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
         callback: defaultCommandToggle(g.group, g.responseWhenAdded),
       });
     }
+  }
+
+  if (initWith.defaultCommands.deactivate) {
+    commands.push({
+      command: initWith.defaultCommands.deactivate,
+      group: initWith.sudoGroup,
+      chatAcion: "typing",
+      description: "Deactivates or reactivates a given command.",
+      callback: defaultCommandDeactivate,
+    });
+  }
+
+  if (initWith.defaultCommands.help) {
+    commands.push({
+      command: initWith.defaultCommands.help,
+      chatAcion: "typing",
+      callback: defaultCommandHelp,
+    });
+  }
+
+  if (initWith.defaultCommands.init) {
+    commands.push({
+      command: initWith.defaultCommands.init,
+      chatAcion: "typing",
+      privateOnly: true,
+      hide: true,
+      callback: defaultCommandInit(initWith.sudoGroup),
+    });
+  }
+
+  if (initWith.defaultCommands.kill) {
+    commands.push({
+      command: initWith.defaultCommands.kill,
+      group: initWith.sudoGroup,
+      privateOnly: true,
+      chatAcion: "typing",
+      description: "Kill the bot.",
+      callback: defaultCommandKill,
+    });
+  }
+
+  if (initWith.defaultCommands.start) {
+    commands.push({
+      command: "start",
+      chatAcion: "typing",
+      callback: defaultCommandStart(initWith.defaultCommands.start.greeting, initWith.defaultCommands.start.addToGroup, initWith.sudoGroup),
+      description: initWith.defaultCommands.start.description,
+    });
+  }
+
+  if (initWith.defaultCommands.uptime) {
+    commands.push({
+      command: initWith.defaultCommands.uptime,
+      group: initWith.sudoGroup,
+      chatAcion: "typing",
+      description: "Get the bot and system uptime.",
+      callback: defaultCommandUptime,
+    });
+  }
+
+  if (initWith.defaultCommands.ip) {
+    commands.push({
+      command: initWith.defaultCommands.ip,
+      group: initWith.sudoGroup,
+      chatAcion: "typing",
+      description: "Get the IP of the system.",
+      callback: defaultCommandIP,
+    });
+  }
+
+  if (initWith.defaultCommands.commands) {
+    commands.push({
+      command: initWith.defaultCommands.commands.command,
+      group: initWith.defaultCommands.commands.availableFor,
+      chatAcion: "typing",
+      description: initWith.defaultCommands.commands.description,
+      callback: defaultCommandCommands,
+    });
+  }
+
+  if (initWith.defaultCommands.var) {
+    commands.push({
+      command: initWith.defaultCommands.var,
+      group: initWith.sudoGroup,
+      privateOnly: true,
+      chatAcion: "typing",
+      description: `See all available variables. Set variables with "/var $number $value".`,
+      callback: defaultCommandVar(),
+    });
+  }
+
+  if (initWith.defaultCommands.groups) {
+    commands.push({
+      command: initWith.defaultCommands.groups,
+      group: initWith.sudoGroup,
+      privateOnly: true,
+      chatAcion: "typing",
+      description: "Gives the members of a specific group.",
+      callback: defaultCommandGroups(),
+    });
+  }
+
+  if (initWith.defaultCommands.userInfo) {
+    commands.push({
+      command: initWith.defaultCommands.userInfo,
+      group: initWith.sudoGroup,
+      chatAcion: "typing",
+      callback: defaultCommandUptime,
+    });
   }
 
   if (initWith.sudoGroup) {
