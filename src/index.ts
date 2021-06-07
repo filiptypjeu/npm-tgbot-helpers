@@ -147,11 +147,11 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
       groups.push(g.group);
       commands.push({
         command: g.requestCommand,
-        callback: defaultCommandRequest(g.group, g.sendRequestTo, g.requestResponse || "", g.toggleCommand), // XXX: Response needed?
+        callback: defaultCommandRequest(g.group, g.sendRequestTo, g.requestResponse, g.toggleCommand),
       });
       commands.push({
         command: g.toggleCommand,
-        callback: defaultCommandToggle(g.group, g.responseWhenAdded || ""), // XXX: Response needed?
+        callback: defaultCommandToggle(g.group, g.responseWhenAdded),
       });
     }
   }
@@ -777,7 +777,7 @@ export const defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
  * @param response The response to send to the user directly after sending the request.
  * @param toggleCommand The command that can be used to grant access to the group in question. The command need to look like "/command_CHATID".
  */
-export const defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, response: string, toggleCommand: Command) => {
+export const defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, response: string | undefined, toggleCommand: Command) => {
   return (msg: TelegramBot.Message) => {
     if (response) {
       sendTo(msg.chat.id, response);
@@ -801,7 +801,7 @@ export const defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, r
  *
  * @returns A callback method for a command.
  */
-export const defaultCommandToggle = (requestFor: Group, response: string) => {
+export const defaultCommandToggle = (requestFor: Group, response?: string) => {
   return (msg: TelegramBot.Message) => {
     const userId = userIdFromCommand(msg);
     if (!userId) {
@@ -811,7 +811,9 @@ export const defaultCommandToggle = (requestFor: Group, response: string) => {
 
     if (requestFor.toggle(userId)) {
       sendTo(msg.chat.id, `Chat ${userId} has been added to group <i>${requestFor}</i>.`, "HTML");
-      sendTo(userId, response);
+      if (response) {
+        sendTo(userId, response);
+      }
       return;
     }
 
