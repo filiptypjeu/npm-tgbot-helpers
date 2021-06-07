@@ -16,6 +16,8 @@ export class Group {
     this.ls.setItem(this.variableName, members.join("\n"));
   };
 
+  public toString = (): string => this.name;
+
   /**
    * Get a list of all current members of this group.
    */
