@@ -16,8 +16,11 @@ export interface IGroupExtended {
   group: Group;
   requestCommand: string;
   requestResponse?: string;
+  requestPrivateOnly?: boolean;
+  requestDescription?: string;
   sendRequestTo: Group;
   toggleCommand: Command;
+  toggleDescription?: string;
   responseWhenAdded?: string;
 }
 
@@ -148,10 +151,17 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
       groups.push(g.group);
       commands.push({
         command: g.requestCommand,
+        chatAcion: g.requestResponse ? "typing" : undefined,
+        privateOnly: g.requestPrivateOnly,
+        description: g.requestDescription,
         callback: defaultCommandRequest(g.group, g.sendRequestTo, g.requestResponse, g.toggleCommand),
       });
       commands.push({
         command: g.toggleCommand,
+        chatAcion: "typing",
+        group: g.sendRequestTo,
+        matchBeginningOnly: true,
+        description: g.toggleDescription,
         callback: defaultCommandToggle(g.group, g.responseWhenAdded),
       });
     }
