@@ -69,7 +69,7 @@ let ls: LocalStorage;
 const startTime = new Date();
 let deactivatedCommands: Group;
 let commands: IBotHelperCommand[] = [];
-let groups: Group[] = [];
+const groups: Group[] = [];
 let errorGroup: Group | undefined;
 let uVars: Variable[] = [];
 let gVars: Variable[] = [];

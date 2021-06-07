@@ -14,7 +14,7 @@ export class Group {
 
   private setMembers = (members: ChatID[]) => {
     this.ls.setItem(this.variableName, members.join("\n"));
-  }
+  };
 
   /**
    * Get a list of all current members of this group.
@@ -33,7 +33,7 @@ export class Group {
    */
   public isMember = (chatId: ChatID): boolean => {
     return this.members.includes(chatId.toString());
-  }
+  };
 
   /**
    * Remove all members of this group.
@@ -41,7 +41,7 @@ export class Group {
   public reset = (): Group => {
     this.ls.setItem(this.variableName, "");
     return this;
-  }
+  };
 
   /**
    * Add a chat/user to this group.
@@ -55,10 +55,10 @@ export class Group {
       return false;
     }
 
-    this.setMembers(members.concat([ chatId.toString() ]));
+    this.setMembers(members.concat([chatId.toString()]));
 
     return true;
-  }
+  };
 
   /**
    * Toggle membership of this group for a chat/user.
@@ -69,11 +69,11 @@ export class Group {
     const members = this.members;
 
     if (members.includes(chatId.toString())) {
-      this.setMembers(members.filter(m => m != chatId.toString()));
+      this.setMembers(members.filter(m => m !== chatId.toString()));
       return false;
     }
 
-    this.setMembers(members.concat([ chatId.toString() ]));
+    this.setMembers(members.concat([chatId.toString()]));
     return true;
-  }
+  };
 }
