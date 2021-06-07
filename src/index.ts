@@ -32,7 +32,7 @@ export interface IBotHelperInit {
   userVariables?: string[];
   commands?: IBotHelperCommand[];
   groups?: (Group | IGroupExtended)[];
-  errorGroup?: Group;
+  sudoGroup?: Group;
   commandLogger?: Logger;
   botLogger?: Logger;
   errorLogger?: Logger;
@@ -74,7 +74,7 @@ const startTime = new Date();
 let deactivatedCommands: Group;
 let commands: IBotHelperCommand[] = [];
 const groups: Group[] = [];
-let errorGroup: Group | undefined;
+let sudoGroup: Group | undefined;
 let uVars: Variable[] = [];
 let gVars: Variable[] = [];
 let commandLogger: Logger | undefined;
@@ -167,8 +167,8 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     }
   }
 
-  if (initWith.errorGroup) {
-    errorGroup = initWith.errorGroup;
+  if (initWith.sudoGroup) {
+    sudoGroup = initWith.sudoGroup;
   }
   if (initWith.globalVariables) {
     gVars = initWith.globalVariables;
@@ -187,7 +187,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
 
         // XXX: Check access first
         // Check if the command is deactivated
-        if (errorGroup && !errorGroup.isMember(msg.chat.id) && deactivatedCommands.isMember(`/${c}`)) {
+        if (sudoGroup && !sudoGroup.isMember(msg.chat.id) && deactivatedCommands.isMember(`/${c}`)) {
           sendTo(
             msg.chat.id,
             initWith.defaultPrivateOnlyMessage ? initWith.defaultPrivateOnlyMessage : "This command has been deactivated."
@@ -412,11 +412,11 @@ export async function sendToGroup(
 
 export const sendError = async (e: any) => {
   botLogger?.error(e);
-  if (!errorGroup) {
+  if (!sudoGroup) {
     return Promise.resolve();
   }
 
-  return sendToGroup(errorGroup, e.toString() ? e.toString().slice(0, 3000) : "Error...");
+  return sendToGroup(sudoGroup, e.toString() ? e.toString().slice(0, 3000) : "Error...");
 };
 
 /**
