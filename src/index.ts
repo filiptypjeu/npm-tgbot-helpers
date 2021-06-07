@@ -13,7 +13,7 @@ import { Logger } from "log4js";
 export interface IBotHelperInit {
   telegramBotToken: string;
   telegramBotName?: string;
-  localStoragePath: string;
+  localStorage: LocalStorage;
   globalVariables?: string[];
   userVariables?: string[];
   commands?: IBotHelperCommand[];
@@ -124,7 +124,7 @@ const groupByGroup = (cmds: IBotHelperCommand[]) => {
  */
 export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   bot = new TelegramBot(initWith.telegramBotToken, { polling: true });
-  ls = new LocalStorage(initWith.localStoragePath);
+  ls = initWith.localStorage;
 
   groups = initWith.groups || [];
   if (initWith.errorGroup) {

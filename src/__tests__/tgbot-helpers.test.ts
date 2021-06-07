@@ -36,9 +36,11 @@ jest.mock("node-telegram-bot-api", () => {
   });
 });
 
+const ls = new LocalStorage("./src/__tests__/variables/");
+
 initBot({
   telegramBotToken: "token",
-  localStoragePath: "./src/__tests__/variables/",
+  localStorage: ls,
   globalVariables: ["testVariable"],
   userVariables: ["var1", "var2"],
   errorGroup: "errorgroup",
