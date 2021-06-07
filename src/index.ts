@@ -545,7 +545,7 @@ export const groupToUserInfo = async (group: Group, extraInfo?: string[]) => {
 export const userIdFromCommand = (msg: TelegramBot.Message, splitAt: string = "_", minusSubstitute: string = "m"): ChatID | undefined => {
   let arg = getCommand(msg).split(splitAt)[1];
   if (!arg) {
-    return;
+    return undefined;
   }
 
   if (arg[0] === minusSubstitute) {
@@ -558,7 +558,7 @@ export const userIdFromCommand = (msg: TelegramBot.Message, splitAt: string = "_
     return userId;
   }
 
-  return;
+  return undefined;
 };
 
 export const commandFriendlyUserId = (userId: ChatID, minusSubstitute: string = "m"): string => {
@@ -808,11 +808,11 @@ export const defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, r
  * Create a callback method for a command that adds a certain chat to a group. The command has to be in the form "/<CMD>_<CHATID>", so that the chat ID in question can be retrieved from the command itself.
  *
  * @param requestFor The group.
- * @param response The response for the one using the command.
+ * @param responseToNewMember The response for the one using the command.
  *
  * @returns A callback method for a command.
  */
-export const defaultCommandToggle = (requestFor: Group, response?: string) => {
+export const defaultCommandToggle = (requestFor: Group, responseToNewMember?: string) => {
   return (msg: TelegramBot.Message) => {
     const userId = userIdFromCommand(msg);
     if (!userId) {
@@ -822,8 +822,8 @@ export const defaultCommandToggle = (requestFor: Group, response?: string) => {
 
     if (requestFor.toggle(userId)) {
       sendTo(msg.chat.id, `Chat ${userId} has been added to group <i>${requestFor}</i>.`, "HTML");
-      if (response) {
-        sendTo(userId, response);
+      if (responseToNewMember) {
+        sendTo(userId, responseToNewMember);
       }
       return;
     }
