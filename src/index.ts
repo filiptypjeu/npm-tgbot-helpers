@@ -5,6 +5,7 @@ import readLastLines from "read-last-lines";
 import sanitizeHtml from "sanitize-html";
 import { Logger } from "log4js";
 import { Group } from "./Group";
+export { Group } from "./Group";
 
 /**
  * @todo
