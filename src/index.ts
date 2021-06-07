@@ -52,7 +52,7 @@ export interface IBotHelperCommand {
 type Group = string;
 type Variable = string;
 type Command = string;
-type ChatID = string | number;
+export type ChatID = string | number;
 
 let bot: TelegramBot;
 let ls: LocalStorage;
