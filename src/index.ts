@@ -4,11 +4,21 @@ import os from "os";
 import readLastLines from "read-last-lines";
 import sanitizeHtml from "sanitize-html";
 import { Logger } from "log4js";
+import { Group } from "./Group";
 
 /**
  * @todo
  * - Command allowed for multiple groups?
  */
+
+export interface IGroupExtended {
+  group: Group;
+  requestCommand: string;
+  requestResponse?: string;
+  sendRequestTo: Group;
+  toggleCommand: Command;
+  responseWhenAdded?: string;
+}
 
 export interface IBotHelperInit {
   telegramBotToken: string;
@@ -17,8 +27,8 @@ export interface IBotHelperInit {
   globalVariables?: string[];
   userVariables?: string[];
   commands?: IBotHelperCommand[];
-  groups?: string[];
-  errorGroup?: string;
+  groups?: (Group | IGroupExtended)[];
+  errorGroup?: Group;
   commandLogger?: Logger;
   botLogger?: Logger;
   errorLogger?: Logger;
@@ -49,7 +59,6 @@ export interface IBotHelperCommand {
   callback: (msg: Message) => void;
 }
 
-type Group = string;
 type Variable = string;
 type Command = string;
 export type ChatID = string | number;
@@ -58,10 +67,10 @@ let bot: TelegramBot;
 let ls: LocalStorage;
 
 const startTime = new Date();
-const deactivatedCommands: Variable = "TGBOT_deactivatedcommands";
+let deactivatedCommands: Group;
 let commands: IBotHelperCommand[] = [];
 let groups: Group[] = [];
-let errorGroup: Group = "";
+let errorGroup: Group | undefined;
 let uVars: Variable[] = [];
 let gVars: Variable[] = [];
 let commandLogger: Logger | undefined;
@@ -101,16 +110,16 @@ const getDurationString = (value: number | Date): string => {
 };
 
 /**
- * Orders the commnads by the grupup that can use them.
+ * Orders the commnads by the group that can use them.
  *
  * @param {IBotHelperCommand} cmds Commands to order.
  *
- * @returns A Map<string, IBotHelperCommand> that maps group name to commands.
+ * @returns A Map<string, IBotHelperCommand[]> that maps group name to commands.
  */
-const groupByGroup = (cmds: IBotHelperCommand[]) => {
-  const m = new Map<string, IBotHelperCommand[]>();
+const groupByGroup = (cmds: IBotHelperCommand[]): Map<Group | undefined, IBotHelperCommand[]> => {
+  const m = new Map<Group | undefined, IBotHelperCommand[]>();
   cmds.forEach(cmd => {
-    const g = cmd.group || "";
+    const g = cmd.group;
     m.set(g, (m.get(g) || []).concat(cmd));
   });
 
@@ -125,8 +134,28 @@ const groupByGroup = (cmds: IBotHelperCommand[]) => {
 export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   bot = new TelegramBot(initWith.telegramBotToken, { polling: true });
   ls = initWith.localStorage;
+  deactivatedCommands = new Group("deactivatedCommands", ls);
 
-  groups = initWith.groups || [];
+  if (initWith.commands) {
+    commands = initWith.commands;
+  }
+
+  for (const g of initWith.groups || []) {
+    if (g instanceof Group) {
+      groups.push(g);
+    } else {
+      groups.push(g.group);
+      commands.push({
+        command: g.requestCommand,
+        callback: defaultCommandRequest(g.group, g.sendRequestTo, g.requestResponse || "", g.toggleCommand), // XXX: Response needed?
+      });
+      commands.push({
+        command: g.toggleCommand,
+        callback: defaultCommandToggle(g.group, g.responseWhenAdded || ""), // XXX: Response needed?
+      });
+    }
+  }
+
   if (initWith.errorGroup) {
     errorGroup = initWith.errorGroup;
   }
@@ -135,9 +164,6 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   }
   if (initWith.userVariables) {
     uVars = initWith.userVariables;
-  }
-  if (initWith.commands) {
-    commands = initWith.commands;
   }
   commandLogger = initWith.commandLogger;
   botLogger = initWith.botLogger;
@@ -148,14 +174,15 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
       bot.onText(commandRegExp(c, user.username!), msg => {
         let log = "ok";
 
+        // XXX: Check access first
         // Check if the command is deactivated
-        if (!isInGroup(errorGroup, msg.chat.id) && isInGroup(deactivatedCommands, `/${c}`)) {
+        if (errorGroup && !errorGroup.isMember(msg.chat.id) && deactivatedCommands.isMember(`/${c}`)) {
           sendTo(
             msg.chat.id,
             initWith.defaultPrivateOnlyMessage ? initWith.defaultPrivateOnlyMessage : "This command has been deactivated."
           );
           log = "deactivated";
-        } else if (c.group && !isInGroup(c.group, msg.chat.id)) {
+        } else if (c.group && !c.group.isMember(msg.chat.id)) {
           sendTo(
             msg.chat.id,
             c.accessDeniedMessage
@@ -260,16 +287,6 @@ export const getArguments = (text?: string): string[] => {
 };
 
 /**
- * Returns whether or not a user/chat is member of a group.
- *
- * @param groupName The group in question.
- * @param userId The user/chat ID in question.
- */
-export const isInGroup = (groupName: Group, userId: ChatID): boolean => {
-  return variableToList(groupName).includes(userId.toString());
-};
-
-/**
  * Send a message to a chat. The message is automatically split into several messages if too long.
  *
  * @param userId The chat ID to send the message to.
@@ -343,29 +360,29 @@ export async function sendTo(
 /**
  * Send a message to each member of a group.
  *
- * @param groupName The group in question.
+ * @param group The group in question.
  * @param text The text to send.
  * @param options Message options.
  */
-export async function sendToGroup(groupName: Group, text: string, options?: TelegramBot.SendMessageOptions): Promise<void[]>;
+export async function sendToGroup(group: Group, text: string, options?: TelegramBot.SendMessageOptions): Promise<void[]>;
 /**
  * Send a message to each member of a group.
  *
- * @param groupName The group in question.
+ * @param group The group in question.
  * @param text The text to send.
  * @param parseMode How to parse the text.
  * @param silent True = no notification is shown for the receiver.
  * @param noPreview  True = no web page preview is shown for the receiver.
  */
 export async function sendToGroup(
-  groupName: Group,
+  group: Group,
   text: string,
   parseMode?: ParseMode,
   silent?: boolean,
   noPreview?: boolean
 ): Promise<void[]>;
 export async function sendToGroup(
-  groupName: Group,
+  group: Group,
   text: string,
   param?: ParseMode | TelegramBot.SendMessageOptions,
   silent: boolean = false,
@@ -379,11 +396,15 @@ export async function sendToGroup(
           disable_notification: silent,
           disable_web_page_preview: noPreview,
         };
-  return Promise.all(variableToList(groupName).map(id => sendTo(id, text, sendOptions)));
+  return Promise.all(group.members.map(id => sendTo(id, text, sendOptions)));
 }
 
 export const sendError = async (e: any) => {
   botLogger?.error(e);
+  if (!errorGroup) {
+    return Promise.resolve();
+  }
+
   return sendToGroup(errorGroup, e.toString() ? e.toString().slice(0, 3000) : "Error...");
 };
 
@@ -485,8 +506,8 @@ export const userVariable = (variableName: Variable, userId: ChatID) => {
   return variableName + "_" + userId;
 };
 
-export const groupToUserInfo = async (variableName: Variable, extraInfo?: string[]) => {
-  const userIds = variableToList(variableName);
+export const groupToUserInfo = async (group: Group, extraInfo?: string[]) => {
+  const userIds = group.members;
 
   if (userIds.length > 0) {
     return await Promise.all(
@@ -501,30 +522,6 @@ export const groupToUserInfo = async (variableName: Variable, extraInfo?: string
   } else {
     return [];
   }
-};
-
-export const addUserIdToGroup = (groupName: Group, userId: ChatID): boolean => {
-  const userIds = variableToList(groupName);
-
-  if (!userIds.includes(userId.toString())) {
-    userIds.push(userId.toString());
-    variable(groupName, userIds.join("\n"));
-    return true;
-  }
-  return false;
-};
-
-export const toggleUserIdInGroup = (groupName: Group, userId: ChatID): boolean => {
-  const userIds = variableToList(groupName);
-
-  if (userIds.includes(userId.toString())) {
-    variable(groupName, userIds.filter(id => id !== userId.toString()).join("\n"));
-    return false;
-  }
-
-  userIds.push(userId.toString());
-  variable(groupName, userIds.join("\n"));
-  return true;
 };
 
 /**
@@ -597,7 +594,7 @@ export const defaultCommandIP = async (msg: TelegramBot.Message) => {
 
 export const defaultCommandCommands = (msg: TelegramBot.Message) => {
   groupByGroup(commands).forEach((cmds, group) => {
-    if (!group || isInGroup(group, msg.chat.id)) {
+    if (!group || group.isMember(msg.chat.id)) {
       sendTo(
         msg.chat.id,
         `<b>Commands accessible to ${group ? `group <i>${group}</i>` : "everybody"}:</b>\n` +
@@ -615,7 +612,7 @@ export const defaultCommandHelp = async (msg: TelegramBot.Message) => {
   return sendTo(
     msg.chat.id,
     commands
-      .filter(cmd => (cmd.group ? isInGroup(cmd.group, msg.chat.id) : !cmd.hide))
+      .filter(cmd => (cmd.group ? cmd.group.isMember(msg.chat.id) : !cmd.hide))
       .map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}${cmd.description ? ":  " + cmd.description : ""}`)
       .sort()
       .join("\n\n"),
@@ -737,9 +734,9 @@ export const defaultCommandLog = (logPath: string, keys?: string) => {
  */
 export const defaultCommandInit = (groupToInitTo: Group) => {
   return (msg: TelegramBot.Message) => {
-    const userIds = variableToList(groupToInitTo);
+    const userIds = groupToInitTo.members;
     if (!userIds.length) {
-      if (toggleUserIdInGroup(groupToInitTo, msg.chat.id)) {
+      if (groupToInitTo.add(msg.chat.id)) {
         sendTo(msg.chat.id, `You have been added to group <i>${groupToInitTo}</i>!`, "HTML");
       }
     } else {
@@ -750,7 +747,7 @@ export const defaultCommandInit = (groupToInitTo: Group) => {
 
 export const defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
   const arg = getArguments(msg.text)[0];
-  const deactivated = variableToList(deactivatedCommands);
+  const deactivated = deactivatedCommands.members;
   let s = "";
 
   if (!arg) {
@@ -760,12 +757,12 @@ export const defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
         : `<b>Deactivated commands:</b>\n${deactivated.map((v, i) => `${i} ${v}`).join("\n")}`
     }`;
   } else if (Number(arg) < deactivated.length) {
-    toggleUserIdInGroup(deactivatedCommands, deactivated[Number(arg)]);
+    deactivatedCommands.toggle(deactivated[Number(arg)]);
     s = `Command ${deactivated[Number(arg)]} has been reactivated!`;
   } else if (arg.indexOf("/") !== 0) {
     s = `Number not correct, or command not starting with '/'.`;
   } else {
-    toggleUserIdInGroup(deactivatedCommands, arg);
+    deactivatedCommands.toggle(arg);
     s = `Command ${arg} has been deactivated!`;
   }
 
@@ -789,7 +786,7 @@ export const defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, r
       sendRequestTo,
       `<b>Request for group <i>${requestFor}</i>:</b>\n - ` +
         msgInfoToString(msg).join("\n - ") +
-        `\n - Is in group: ${isInGroup(requestFor, msg.chat.id)}\n` +
+        `\n - Is in group: ${requestFor.isMember(msg.chat.id)}\n` +
         `/${toggleCommand}_${commandFriendlyUserId(msg.chat.id)}`,
       "HTML"
     );
@@ -812,7 +809,7 @@ export const defaultCommandToggle = (requestFor: Group, response: string) => {
       return;
     }
 
-    if (toggleUserIdInGroup(requestFor, userId)) {
+    if (requestFor.toggle(userId)) {
       sendTo(msg.chat.id, `Chat ${userId} has been added to group <i>${requestFor}</i>.`, "HTML");
       sendTo(userId, response);
       return;
@@ -833,7 +830,7 @@ export const defaultCommandToggle = (requestFor: Group, response: string) => {
 export const defaultCommandStart = (response: string, addToGroup: Group, alertGroup?: Group, alertMessage?: string) => {
   return (msg: TelegramBot.Message) => {
     sendTo(msg.chat.id, response, "HTML");
-    if (addUserIdToGroup(addToGroup, msg.chat.id) && alertGroup) {
+    if (addToGroup.add(msg.chat.id) && alertGroup) {
       const message = alertMessage ? alertMessage : `<b>Chat $CHATID has used the start command!</b>\n$INFO`;
 
       sendToGroup(
@@ -858,13 +855,13 @@ export const defaultCommandGroups = () => {
     const n = Number(getArguments(msg.text)[0]);
 
     if (n >= 0 && n < groups.length) {
-      const groupName = groups[n];
-      groupToUserInfo(groupName)
+      const group = groups[n];
+      groupToUserInfo(group)
         .then(a => {
           const message =
             a.length === 0
-              ? `No chats in group <i>${groupName}</i>.`
-              : `<b>Chats in group <i>${groupName}</i></b>:\n${a.map(s => ` - ${s}`).join("\n")}`;
+              ? `No chats in group <i>${group.name}</i>.`
+              : `<b>Chats in group <i>${group.name}</i></b>:\n${a.map(s => ` - ${s}`).join("\n")}`;
           sendTo(msg.chat.id, message, "HTML");
         })
         .catch(e => sendError(e));
