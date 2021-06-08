@@ -14,7 +14,7 @@ const variables: IVariable[] = [
   {
     name: "var2",
     defaultValue: 123,
-  }
+  },
 ];
 
 const varMgr = new VariableManager(variables, ls);

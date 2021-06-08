@@ -42,16 +42,16 @@ export interface IBotHelperInit {
     var?: Command;
     groups?: Command;
     commands?: {
-      command: Command,
-      availableFor?: Group,
-      description?: string,
-    },
+      command: Command;
+      availableFor?: Group;
+      description?: string;
+    };
     start?: {
       greeting: string;
       addToGroup?: Group;
       description?: string;
-    }
-  },
+    };
+  };
   groups?: (Group | IGroupExtended)[];
   sudoGroup: Group;
   commandLogger?: Logger;

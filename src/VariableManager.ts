@@ -28,16 +28,16 @@ export class VariableManager {
   private getDefault = (variableName: string): string | number => {
     const variable = this.variables.find(v => v.name === variableName);
     return variable ? variable.defaultValue : "";
-  }
+  };
 
   private getPersistent = (domain?: Domain): IPersistent => {
     const str = this.ls.getItem(this.domainVariable(domain !== undefined ? domain : this.globalDomain));
     return str ? JSON.parse(str) : {};
-  }
+  };
 
   private setPersistent = (value: IPersistent, domain?: Domain) => {
     this.ls.setItem(this.domainVariable(domain !== undefined ? domain : this.globalDomain), JSON.stringify(value));
-  }
+  };
 
   public get = (variableName: string, domain?: Domain): string | number => {
     const d = this.getPersistent(domain);
@@ -48,13 +48,12 @@ export class VariableManager {
     }
 
     return value;
-  }
+  };
 
   public set = (variableName: string, value: string | number, domain?: Domain): void => {
     const d = this.getPersistent(domain);
 
     d[variableName] = value;
     this.setPersistent(d, domain);
-  }
-
+  };
 }
