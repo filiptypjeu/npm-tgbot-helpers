@@ -188,7 +188,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     }
   }
 
-  if (initWith.defaultCommands.deactivate) {
+  if (initWith.defaultCommands?.deactivate) {
     commands.push({
       command: initWith.defaultCommands.deactivate,
       group: initWith.sudoGroup,
@@ -198,7 +198,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     });
   }
 
-  if (initWith.defaultCommands.help) {
+  if (initWith.defaultCommands?.help) {
     commands.push({
       command: initWith.defaultCommands.help,
       chatAcion: "typing",
@@ -206,7 +206,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     });
   }
 
-  if (initWith.defaultCommands.init) {
+  if (initWith.defaultCommands?.init) {
     commands.push({
       command: initWith.defaultCommands.init,
       chatAcion: "typing",
@@ -216,7 +216,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     });
   }
 
-  if (initWith.defaultCommands.kill) {
+  if (initWith.defaultCommands?.kill) {
     commands.push({
       command: initWith.defaultCommands.kill,
       group: initWith.sudoGroup,
@@ -227,7 +227,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     });
   }
 
-  if (initWith.defaultCommands.start) {
+  if (initWith.defaultCommands?.start) {
     commands.push({
       command: "start",
       chatAcion: "typing",
@@ -236,7 +236,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     });
   }
 
-  if (initWith.defaultCommands.uptime) {
+  if (initWith.defaultCommands?.uptime) {
     commands.push({
       command: initWith.defaultCommands.uptime,
       group: initWith.sudoGroup,
@@ -246,7 +246,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     });
   }
 
-  if (initWith.defaultCommands.ip) {
+  if (initWith.defaultCommands?.ip) {
     commands.push({
       command: initWith.defaultCommands.ip,
       group: initWith.sudoGroup,
@@ -256,7 +256,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     });
   }
 
-  if (initWith.defaultCommands.commands) {
+  if (initWith.defaultCommands?.commands) {
     commands.push({
       command: initWith.defaultCommands.commands.command,
       group: initWith.defaultCommands.commands.availableFor,
@@ -266,7 +266,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     });
   }
 
-  if (initWith.defaultCommands.var) {
+  if (initWith.defaultCommands?.var) {
     commands.push({
       command: initWith.defaultCommands.var,
       group: initWith.sudoGroup,
@@ -277,7 +277,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     });
   }
 
-  if (initWith.defaultCommands.groups) {
+  if (initWith.defaultCommands?.groups) {
     commands.push({
       command: initWith.defaultCommands.groups,
       group: initWith.sudoGroup,
@@ -288,7 +288,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     });
   }
 
-  if (initWith.defaultCommands.userInfo) {
+  if (initWith.defaultCommands?.userInfo) {
     commands.push({
       command: initWith.defaultCommands.userInfo,
       group: initWith.sudoGroup,

@@ -37,15 +37,15 @@ const ls = new LocalStorage("./src/__tests__/variables/");
 const group = new Group("mygroup", ls).reset();
 group.add(11111);
 group.add(22222);
-const errorGroup = new Group("admin", ls).reset();
-errorGroup.add(33333);
+const sudoGroup = new Group("admin", ls).reset();
+sudoGroup.add(33333);
 
 initBot({
   telegramBotToken: "token",
   localStorage: ls,
   globalVariables: ["testVariable"],
   userVariables: ["var1", "var2"],
-  errorGroup,
+  sudoGroup,
 });
 
 const props = properties();
