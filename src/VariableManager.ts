@@ -23,7 +23,7 @@ export class VariableManager {
     this.ls = ls;
   }
 
-  private domainVariable = (domain: Domain) => "DOMAIN_" + domain.toString();
+  private domainVariable = (domain: Domain) => "VARIABLES_" + domain.toString();
 
   private getDefault = (variableName: string): string | number => {
     const variable = this.variables.find(v => v.name === variableName);

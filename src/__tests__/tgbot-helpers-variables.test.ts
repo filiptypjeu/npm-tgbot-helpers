@@ -2,9 +2,9 @@ import { LocalStorage } from "node-localstorage";
 import { IVariable, VariableManager } from "../VariableManager";
 
 const ls = new LocalStorage("./src/__tests__/variables/");
-ls.setItem("DOMAIN_GLOBAL", "");
-ls.setItem("DOMAIN_1234", "");
-ls.setItem("DOMAIN_abcd", "");
+ls.setItem("VARIABLES_GLOBAL", "");
+ls.setItem("VARIABLES_1234", "");
+ls.removeItem("VARIABLES_abcd");
 
 const variables: IVariable[] = [
   {
@@ -51,4 +51,10 @@ test("set and get values with a domain", () => {
 
   varMgr.set("var", "69", "abcd");
   expect(varMgr.get("var", "abcd")).toEqual("69");
+});
+
+test("get raw localstorage items", () => {
+  expect(ls.getItem("VARIABLES_GLOBAL")).toEqual('{"var1":"value1","var2":"value2","var":"value"}');
+  expect(ls.getItem("VARIABLES_1234")).toEqual('{"var1":42,"var2":69}');
+  expect(ls.getItem("VARIABLES_abcd")).toEqual('{"var":"69"}');
 });
