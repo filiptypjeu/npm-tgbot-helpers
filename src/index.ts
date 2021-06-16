@@ -63,14 +63,6 @@ export interface IBotHelperInit {
   whenOnline?: () => void;
 }
 
-export interface IBotHelperProps {
-  telegramBot: TelegramBot;
-  localStorage: LocalStorage;
-  globalVariables: string[];
-  userVariables: string[];
-  commands: IBotHelperCommand[];
-}
-
 export interface IBotHelperCommand {
   command: Command;
   regexp?: RegExp;
@@ -369,17 +361,10 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
 };
 
 /**
- * Returns some Telegram Bot properties.
+ * Returns the actual Telegram Bot.
  */
-export const properties = (): IBotHelperProps => {
-  const p: IBotHelperProps = {
-    commands,
-    globalVariables: gVars,
-    localStorage: ls,
-    telegramBot: bot,
-    userVariables: uVars,
-  };
-  return p;
+export const getBot = (): TelegramBot => {
+  return bot;
 };
 
 export const msgInfoToString = (msg: TelegramBot.Message): string[] => {

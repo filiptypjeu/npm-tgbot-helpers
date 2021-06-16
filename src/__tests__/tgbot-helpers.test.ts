@@ -1,7 +1,6 @@
 import TelegramBot = require("node-telegram-bot-api");
 import { LocalStorage } from "node-localstorage";
 import {
-  properties,
   initBot,
   sendTo,
   variableToBool,
@@ -18,6 +17,7 @@ import {
   longNameFromUser,
   commandRegExp,
   IBotHelperCommand,
+  getBot,
 } from "../index";
 import { Group } from "../Group";
 
@@ -48,15 +48,7 @@ initBot({
   sudoGroup,
 });
 
-const props = properties();
-const bot = props.telegramBot;
-
-test("properties", () => {
-  // expect(bot).toEqual(expect.any(TelegramBot));
-  expect(ls).toEqual(expect.any(LocalStorage));
-  expect(props.globalVariables).toEqual(["testVariable"]);
-  expect(props.userVariables).toEqual(["var1", "var2"]);
-});
+const bot = getBot();
 
 test("variable", () => {
   ls.setItem("v1", "123");
