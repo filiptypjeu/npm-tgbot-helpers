@@ -41,3 +41,36 @@ test("get raw localstorage items", () => {
   expect(ls.getItem("VARIABLES_abcd")).toEqual('{"var1":"BBB"}');
   expect(ls.getItem("VARIABLES_1234")).toEqual('{"var1":"789","var2":789}');
 });
+
+interface ITest {
+  a: string[];
+  b: number[];
+  c?: ITest;
+};
+
+const d: ITest = {
+  a: ["a"],
+  b: [1],
+}
+
+const var3 = new Variable<ITest>("var3", d, ls);
+
+test("get default value for complex type", () => {
+  expect(var3.get()).toEqual(d);
+  expect(var3.get(1234)).toEqual(d);
+});
+
+d.b = [42, 43];
+d.c = {
+  a: ["b", "c"],
+  b: [ 2, 3 ],
+};
+
+test("set and get value for complex type", () => {
+  var3.set(d)
+  expect(var3.get()).toEqual(d);
+  var3.set(d, 1234)
+  expect(var3.get(1234)).toEqual(d);
+
+  expect(ls.getItem("VARIABLES_")).toEqual('{"var1":"AAA","var2":456,"var3":{"a":["a"],"b":[42,43],"c":{"a":["b","c"],"b":[2,3]}}}');
+});
