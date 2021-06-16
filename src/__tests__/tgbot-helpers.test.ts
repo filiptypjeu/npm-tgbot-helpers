@@ -3,15 +3,10 @@ import { LocalStorage } from "node-localstorage";
 import {
   initBot,
   sendTo,
-  variableToBool,
-  variableToNumber,
-  variableToObject,
-  variable,
   sendToGroup,
   getArguments,
   sendError,
   groupToUserInfo,
-  userVariable,
   userIdFromCommand,
   commandFriendlyUserId,
   longNameFromUser,
@@ -43,66 +38,10 @@ sudoGroup.add(33333);
 initBot({
   telegramBotToken: "token",
   localStorage: ls,
-  globalVariables: ["testVariable"],
-  userVariables: ["var1", "var2"],
   sudoGroup,
 });
 
 const bot = getBot();
-
-test("variable", () => {
-  ls.setItem("v1", "123");
-  expect(variable("v1")).toEqual("123");
-
-  variable("v2", 1);
-  expect(variable("v2")).toEqual("1");
-
-  variable("v3", "string");
-  expect(variable("v3")).toEqual("string");
-});
-
-test("userVariable", () => {
-  expect(userVariable("test", "12345")).toEqual("test_12345");
-  expect(userVariable("test", 54321)).toEqual("test_54321");
-});
-
-test("variableToNumber", () => {
-  expect(variableToNumber("v1")).toEqual(123);
-  expect(variableToNumber("v2")).toEqual(1);
-  expect(variableToNumber("v3")).toEqual(0);
-  expect(variableToNumber("v1", 5)).toEqual(123);
-  expect(variableToNumber("v2", 5)).toEqual(1);
-  expect(variableToNumber("v3", 5)).toEqual(5);
-});
-
-test("variableToBool", () => {
-  expect(variableToBool("v1")).toEqual(false);
-  expect(variableToBool("v2")).toEqual(true);
-  expect(variableToBool("v3")).toEqual(false);
-});
-
-test("variableToObject", () => {
-  variable("obj", "");
-  expect(variableToObject("obj")).toEqual({});
-
-  variableToObject("obj", "num", 5);
-  expect(variableToObject("obj")).toEqual({ num: 5 });
-
-  variableToObject("obj", "stringg", "246");
-  expect(variableToObject("obj")).toEqual({ num: 5, stringg: "246" });
-
-  variableToObject("obj", "anotherObject", { value: 7.4 });
-  expect(variableToObject("obj")).toEqual({ num: 5, stringg: "246", anotherObject: { value: 7.4 } });
-
-  variableToObject("obj", "num");
-  expect(variableToObject("obj")).toEqual({ stringg: "246", anotherObject: { value: 7.4 } });
-
-  variableToObject("obj", "num");
-  expect(variableToObject("obj")).toEqual({ stringg: "246", anotherObject: { value: 7.4 } });
-
-  variableToObject("obj", "anotherObject", "123");
-  expect(variableToObject("obj")).toEqual({ stringg: "246", anotherObject: "123" });
-});
 
 test("getArguments", () => {
   expect(getArguments("/test a b c")).toEqual(["a", "b", "c"]);

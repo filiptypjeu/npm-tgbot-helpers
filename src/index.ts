@@ -6,6 +6,8 @@ import sanitizeHtml from "sanitize-html";
 import { Logger } from "log4js";
 import { Group } from "./Group";
 export { Group } from "./Group";
+import { Variable } from "./Variable";
+export { Variable } from "./Variable";
 
 /**
  * @todo
@@ -28,8 +30,7 @@ export interface IBotHelperInit {
   telegramBotToken: string;
   telegramBotName?: string;
   localStorage: LocalStorage;
-  globalVariables?: string[];
-  userVariables?: string[];
+  variables?: Variable<any>[];
   commands?: IBotHelperCommand[];
   defaultCommands?: {
     init?: Command;
@@ -76,7 +77,6 @@ export interface IBotHelperCommand {
   callback: (msg: Message) => void;
 }
 
-type Variable = string;
 type Command = string;
 export type ChatID = string | number;
 
@@ -88,8 +88,7 @@ let deactivatedCommands: Group;
 let commands: IBotHelperCommand[] = [];
 const groups: Group[] = [];
 let sudoGroup: Group;
-let uVars: Variable[] = [];
-let gVars: Variable[] = [];
+let vars: Variable<any>[] = [];
 let commandLogger: Logger | undefined;
 let botLogger: Logger | undefined;
 let errorLogger: Logger | undefined;
@@ -292,11 +291,8 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   if (initWith.sudoGroup) {
     sudoGroup = initWith.sudoGroup;
   }
-  if (initWith.globalVariables) {
-    gVars = initWith.globalVariables;
-  }
-  if (initWith.userVariables) {
-    uVars = initWith.userVariables;
+  if (initWith.variables) {
+    vars = initWith.variables;
   }
   commandLogger = initWith.commandLogger;
   botLogger = initWith.botLogger;
@@ -350,7 +346,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   });
 
   botLogger?.info(
-    `Telegram bot initialized with ${commands.length} commands, ${groups.length} groups, ${gVars.length} global variables and ${uVars.length} user variables.`
+    `Telegram bot initialized with ${commands.length} commands, ${groups.length} groups and ${vars.length} variables.`
   );
 
   if (initWith.whenOnline) {
@@ -534,104 +530,6 @@ export const sendError = async (e: any) => {
   return sendToGroup(sudoGroup, e.toString() ? e.toString().slice(0, 3000) : "Error...");
 };
 
-/**
- * Get the value of a vraiable.
- *
- * @param variableName The name of the variable.
- */
-export function variable(variableName: Variable): string;
-/**
- * Set the value of a variable.
- *
- * @param variableName The name of the variable.
- * @param value The new value of the variable.
- */
-export function variable(variableName: Variable, value: string | number | (string | number)[] | object): void;
-export function variable(variableName: Variable, value?: string | number | (string | number)[] | object) {
-  if (value === undefined) {
-    return ls.getItem(variableName) || "";
-  }
-
-  if (Array.isArray(value)) {
-    return ls.setItem(variableName, value.join("\n"));
-  } else if (typeof value === "object") {
-    return ls.setItem(variableName, JSON.stringify(value));
-  }
-
-  return ls.setItem(variableName, value.toString());
-}
-
-/**
- * Get tha value of a variable as a Number.
- *
- * @param variableName The name of the variable.
- * @param defaultValue The Number to default to if the value is not found or not a number.
- */
-export const variableToNumber = (variableName: string, defaultValue: number = 0): number => {
-  const s = ls.getItem(variableName);
-  return Number(s) ? Number(s) : defaultValue;
-};
-
-/**
- * Get the valur of a variable as a Boolean.
- *
- * @param variableName The name of the variable.
- *
- * @returns Returns True only if the value is "1".
- */
-export const variableToBool = (variableName: string): boolean => {
-  return ls.getItem(variableName) === "1";
-};
-
-/**
- * Get the value of a variable as a List of strings.
- *
- * @param variableName The name of the variable.
- */
-export const variableToList = (variableName: string): string[] => {
-  const s = variable(variableName);
-  return s
-    ? s
-        .trim()
-        .split(" ")
-        .join("\n")
-        .split("\n")
-        .filter(v => v)
-    : [];
-};
-
-/**
- * Get the value of a variable as an Object.
- *
- * @param variableName The name of the variable.
- */
-export function variableToObject(variableName: Variable): object;
-/**
- * Assuming the variable value can be parsed as JSON, sets one property of the Object.
- *
- * @param variableName The name of the variable.
- * @param property The property of the Object.
- * @param value The new property value.
- */
-export function variableToObject(variableName: Variable, property: string, value?: any): void;
-export function variableToObject(variableName: Variable, property?: string, value?: any) {
-  const object = JSON.parse(variable(variableName) || "{}");
-  if (!property) {
-    return object;
-  }
-  if (value === undefined) {
-    delete object[property];
-  } else {
-    object[property] = value;
-  }
-  variable(variableName, JSON.stringify(object));
-  return;
-}
-
-export const userVariable = (variableName: Variable, userId: ChatID) => {
-  return variableName + "_" + userId;
-};
-
 export const groupToUserInfo = async (group: Group, extraInfo?: string[]) => {
   const userIds = group.members;
 
@@ -753,28 +651,25 @@ export const defaultCommandKill = (msg: TelegramBot.Message) => {
   }, 3000);
 };
 
-export const defaultCommandVar = (variables?: Variable[]) => {
+export const defaultCommandVar = () => {
   return async (msg: TelegramBot.Message) => {
-    const varsToUse: Variable[] = variables || gVars;
     const args = getArguments(msg.text);
 
     if (!args[0]) {
       return sendTo(
         msg.chat.id,
         "<b>Available variables:</b>\n" +
-          varsToUse
-            .map((v, i) => {
-              const value = variable(v);
-              return `${i} ${v} ${value ? value : "null"}`;
-            })
+          vars
+            .map((v, i) => `${i} ${v.name} ${JSON.stringify(v.get())}`)
             .join("\n"),
         "HTML"
       );
     } else if (!args[1]) {
       return sendTo(msg.chat.id, "Please provide two arguments.");
-    } else if (Number(args[0]) >= 0 && Number(args[0]) < varsToUse.length) {
-      variable(varsToUse[Number(args[0])], args.slice(1).join(" ").trim());
-      return sendTo(msg.chat.id, `Variable set: <b>${varsToUse[Number(args[0])]} = ${variable(varsToUse[Number(args[0])])}</b>`, "HTML");
+    } else if (Number(args[0]) >= 0 && Number(args[0]) < vars.length) {
+      const v = vars[Number(args[0])];
+      v.set(args.slice(1).join(" ").trim());
+      return sendTo(msg.chat.id, `Variable set: <b>${v.name} = ${v.get()}</b>`, "HTML");
     } else {
       return sendTo(msg.chat.id, `Variable ${args[0]} does not exist.`);
     }
