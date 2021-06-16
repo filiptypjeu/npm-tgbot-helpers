@@ -30,6 +30,13 @@ export class Variable<T> {
     return str ? JSON.parse(str) : {};
   };
 
+  private setPersistent = (object: IPersistent, domain?: Domain): void => {
+    this.ls.setItem(this.variableName(domain), JSON.stringify(object));
+  };
+
+  /**
+   * Get the value of this variable in a global or specific domain.
+   */
   public get = (domain?: Domain): T => {
     const d = this.getPersistent(domain);
 
@@ -41,10 +48,23 @@ export class Variable<T> {
     return value;
   };
 
+  /**
+   * Set the value of this variable in a global or specific domain.
+   */
   public set = (value: T, domain?: Domain): void => {
     const d = this.getPersistent(domain);
 
     d[this.name] = value;
-    this.ls.setItem(this.variableName(domain), JSON.stringify(d));
+    this.setPersistent(d, domain);
   };
+
+  /**
+   * Reset this varaible to the default value.
+   */
+  public reset = (domain?: Domain): void => {
+    const d = this.getPersistent(domain);
+
+    delete d[this.name];
+    this.setPersistent(d, domain);
+  }
 }

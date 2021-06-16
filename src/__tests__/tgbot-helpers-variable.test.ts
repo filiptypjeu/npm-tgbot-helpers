@@ -74,3 +74,21 @@ test("set and get value for complex type", () => {
 
   expect(ls.getItem("VARIABLES_")).toEqual('{"var1":"AAA","var2":456,"var3":{"a":["a"],"b":[42,43],"c":{"a":["b","c"],"b":[2,3]}}}');
 });
+
+test("reset values with no domain", () => {
+  var1.reset();
+  expect(var1.get()).toEqual("hello");
+  var2.reset();
+  expect(var2.get()).toEqual(123);
+  var3.reset();
+  expect(ls.getItem("VARIABLES_")).toEqual('{}');
+});
+
+test("reset values with domain", () => {
+  var1.reset(1234);
+  expect(var1.get("1234")).toEqual("hello");
+  var2.reset("1234");
+  expect(var2.get(1234)).toEqual(123);
+  var3.reset(1234);
+  expect(ls.getItem("VARIABLES_1234")).toEqual('{}');
+});
