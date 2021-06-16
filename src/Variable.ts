@@ -13,7 +13,7 @@ interface IPersistent {
 }
 
 export class Variable<T> {
-  private readonly name: string;
+  public readonly name: string;
   private readonly ls: LocalStorage;
   private readonly defaultValue: T;
 
