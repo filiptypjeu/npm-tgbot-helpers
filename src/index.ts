@@ -263,7 +263,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
       group: initWith.sudoGroup,
       privateOnly: true,
       chatAcion: "typing",
-      description: `See all available variables. Set variables with "/var $number $value".`,
+      description: `See all available variables. Set variables with "/var &lt;number&gt; &lt;value&gt;".`,
       callback: defaultCommandVar(),
     });
   }
@@ -304,7 +304,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
 
         // XXX: Check access first
         // Check if the command is deactivated
-        if (sudoGroup && !sudoGroup.isMember(msg.chat.id) && deactivatedCommands.isMember(`/${c}`)) {
+        if (!sudoGroup.isMember(msg.chat.id) && deactivatedCommands.isMember(`/${c}`)) {
           sendTo(
             msg.chat.id,
             initWith.defaultPrivateOnlyMessage ? initWith.defaultPrivateOnlyMessage : "This command has been deactivated."
