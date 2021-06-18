@@ -10,6 +10,7 @@
                 "ban-keywords",
                 "require-const-for-all-caps"
             ]
-        }
+        },
+        "max-classes-per-file": false
     }
 }

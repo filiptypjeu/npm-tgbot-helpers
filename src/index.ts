@@ -344,9 +344,7 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
     });
   });
 
-  botLogger?.info(
-    `Telegram bot initialized with ${commands.length} commands, ${groups.length} groups and ${vars.length} variables.`
-  );
+  botLogger?.info(`Telegram bot initialized with ${commands.length} commands, ${groups.length} groups and ${vars.length} variables.`);
 
   if (initWith.whenOnline) {
     initWith.whenOnline();

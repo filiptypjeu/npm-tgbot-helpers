@@ -62,12 +62,12 @@ interface ITest {
   a: string[];
   b: number[];
   c?: ITest;
-};
+}
 
 const d: ITest = {
   a: ["a"],
   b: [1],
-}
+};
 
 const var3 = new Variable<ITest>("var3", d, ls);
 
@@ -79,7 +79,7 @@ test("get default value for complex type", () => {
 d.b = [42, 43];
 d.c = {
   a: ["b", "c"],
-  b: [ 2, 3 ],
+  b: [2, 3],
 };
 
 test("set and get value for complex type", () => {
@@ -101,7 +101,7 @@ test("reset values with no domain", () => {
   var2.reset();
   expect(var2.get()).toEqual(123);
   var3.reset();
-  expect(ls.getItem("VARIABLES_")).toEqual('{}');
+  expect(ls.getItem("VARIABLES_")).toEqual("{}");
 });
 
 test("reset values with domain", () => {
@@ -110,7 +110,7 @@ test("reset values with domain", () => {
   var2.reset("1234");
   expect(var2.get(1234)).toEqual(123);
   var3.reset(1234);
-  expect(ls.getItem("VARIABLES_1234")).toEqual('{}');
+  expect(ls.getItem("VARIABLES_1234")).toEqual("{}");
 });
 
 test("test type", () => {

@@ -58,13 +58,13 @@ abstract class InternalVariable<T> {
 
     delete d[this.name];
     this.setPersistent(d, domain);
-  }
+  };
 
   /**
    * Set the value of this variable in a global or specific domain.
    */
   public abstract set(value: T | string, domain?: Domain): boolean;
-};
+}
 
 export class Variable<T> extends InternalVariable<T> {
   public set = (value: T | string, domain?: Domain) => {
