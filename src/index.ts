@@ -11,7 +11,8 @@ export { Variable } from "./Variable";
 
 /**
  * @todo
- * - Command allowed for multiple groups?
+ * - Command allowed for multiple groups
+ * - Better info about a user, and a separate command
  */
 
 export interface IGroupExtended {
