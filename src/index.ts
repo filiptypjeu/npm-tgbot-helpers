@@ -291,9 +291,8 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
   if (initWith.sudoGroup) {
     sudoGroup = initWith.sudoGroup;
   }
-  if (initWith.variables) {
-    vars = initWith.variables;
-  }
+
+  vars = initWith.variables;
   commandLogger = initWith.commandLogger;
   botLogger = initWith.botLogger;
   errorLogger = initWith.errorLogger;
@@ -443,7 +442,7 @@ export async function sendTo(
         };
 
   bot
-    .sendMessage(userId, sendOptions.parse_mode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i"] }) : text, sendOptions)
+    .sendMessage(userId, sendOptions.parse_mode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i", "code"] }) : text, sendOptions)
     .catch(async e => {
       if (e.code === "ETELEGRAM") {
         if (e.response.body.description === "Bad Request: message is too long") {
@@ -658,18 +657,22 @@ export const defaultCommandVar = () => {
     if (!args[0]) {
       return sendTo(
         msg.chat.id,
-        "<b>Available variables:</b>\n" +
-          vars
-            .map((v, i) => `${i} ${v.name} ${JSON.stringify(v.get())}`)
-            .join("\n"),
+        "<b>Available variables:</b>\n<code>" +
+          vars.map((v, i) => `${i} ${v.name}: ${v.type} = ${JSON.stringify(v.get())}`).join("\n") +
+          "</code>",
         "HTML"
       );
     } else if (!args[1]) {
       return sendTo(msg.chat.id, "Please provide two arguments.");
     } else if (Number(args[0]) >= 0 && Number(args[0]) < vars.length) {
       const v = vars[Number(args[0])];
-      v.set(args.slice(1).join(" ").trim());
-      return sendTo(msg.chat.id, `Variable set: <b>${v.name} = ${v.get()}</b>`, "HTML");
+      const value = args.slice(1).join(" ").trim();
+      try {
+        v.set(value);
+        return sendTo(msg.chat.id, `Variable set: <code>${v.name}: ${v.type} = ${JSON.stringify(v.get())}</code>`, "HTML");
+      } catch (e) {
+        return sendTo(msg.chat.id, `Could not set value JSON.parse(${value})`, "HTML");
+      }
     } else {
       return sendTo(msg.chat.id, `Variable ${args[0]} does not exist.`);
     }
