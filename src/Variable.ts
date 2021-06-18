@@ -12,10 +12,10 @@ interface IPersistent {
   [key: string]: any;
 }
 
-export class Variable<T> {
+abstract class InternalVariable<T> {
   public readonly name: string;
-  private readonly ls: LocalStorage;
-  private readonly defaultValue: T;
+  protected readonly ls: LocalStorage;
+  protected readonly defaultValue: T;
   public readonly type: string;
 
   constructor(name: string, defaultValue: T, ls: LocalStorage) {
@@ -25,14 +25,14 @@ export class Variable<T> {
     this.type = typeof this.defaultValue;
   }
 
-  private variableName = (domain?: Domain) => "VARIABLES_" + (domain !== undefined ? domain.toString() : "");
+  protected variableName = (domain?: Domain) => "VARIABLES_" + (domain !== undefined ? domain.toString() : "");
 
-  private getPersistent = (domain?: Domain): IPersistent => {
+  protected getPersistent = (domain?: Domain): IPersistent => {
     const str = this.ls.getItem(this.variableName(domain));
     return str ? JSON.parse(str) : {};
   };
 
-  private setPersistent = (object: IPersistent, domain?: Domain): void => {
+  protected setPersistent = (object: IPersistent, domain?: Domain): void => {
     this.ls.setItem(this.variableName(domain), JSON.stringify(object));
   };
 
@@ -51,9 +51,23 @@ export class Variable<T> {
   };
 
   /**
+   * Reset this varaible to the default value.
+   */
+  public reset = (domain?: Domain): void => {
+    const d = this.getPersistent(domain);
+
+    delete d[this.name];
+    this.setPersistent(d, domain);
+  }
+
+  /**
    * Set the value of this variable in a global or specific domain.
    */
-  public set = (value: T | string, domain?: Domain): boolean => {
+  public abstract set(value: T | string, domain?: Domain): boolean;
+};
+
+export class Variable<T> extends InternalVariable<T> {
+  public set = (value: T | string, domain?: Domain) => {
     // If value is given as a string and the internal value is not a string, it means that the value is stringified
     if (this.type !== "string" && typeof value === "string") {
       // Try to parse the value
@@ -75,14 +89,32 @@ export class Variable<T> {
     this.setPersistent(d, domain);
     return true;
   };
+}
 
-  /**
-   * Reset this varaible to the default value.
-   */
-  public reset = (domain?: Domain): void => {
+export class StringVariable extends InternalVariable<string> {
+  public set = (value: string, domain?: Domain) => {
     const d = this.getPersistent(domain);
 
-    delete d[this.name];
+    d[this.name] = value;
     this.setPersistent(d, domain);
-  }
+    return true;
+  };
+}
+
+export class BooleanVariable extends InternalVariable<boolean> {
+  public set = (value: boolean | string, domain?: Domain) => {
+    if (typeof value === "string") {
+      try {
+        value = JSON.parse(value) ? true : false;
+      } catch {
+        value = value ? true : false;
+      }
+    }
+
+    const d = this.getPersistent(domain);
+
+    d[this.name] = value;
+    this.setPersistent(d, domain);
+    return true;
+  };
 }

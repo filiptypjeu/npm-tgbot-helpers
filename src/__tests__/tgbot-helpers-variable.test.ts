@@ -1,5 +1,5 @@
 import { LocalStorage } from "node-localstorage";
-import { Variable } from "../Variable";
+import { BooleanVariable, StringVariable, Variable } from "../Variable";
 
 const ls = new LocalStorage("./src/__tests__/variables/");
 ls.setItem("VARIABLES_", "");
@@ -117,4 +117,32 @@ test("test type", () => {
   expect(var1.type).toEqual("string");
   expect(var2.type).toEqual("number");
   expect(var3.type).toEqual("object");
+});
+
+const var4 = new StringVariable("var1", "default", ls);
+
+test("stringvariable", () => {
+  expect(var4.type).toEqual("string");
+  expect(var4.get()).toEqual("default");
+  expect(var4.set("987654")).toEqual(true);
+  expect(var4.get()).toEqual("987654");
+});
+
+const var5 = new BooleanVariable("var2", false, ls);
+
+test("booleanvariable", () => {
+  expect(var5.type).toEqual("boolean");
+  expect(var5.get()).toEqual(false);
+  expect(var5.set(true)).toEqual(true);
+  expect(var5.get()).toEqual(true);
+  expect(var5.set(false)).toEqual(true);
+  expect(var5.get()).toEqual(false);
+  expect(var5.set("987654")).toEqual(true);
+  expect(var5.get()).toEqual(true);
+  expect(var5.set("0")).toEqual(true);
+  expect(var5.get()).toEqual(false);
+  expect(var5.set("abc")).toEqual(true);
+  expect(var5.get()).toEqual(true);
+  expect(var5.set("")).toEqual(true);
+  expect(var5.get()).toEqual(false);
 });
