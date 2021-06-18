@@ -16,11 +16,13 @@ export class Variable<T> {
   public readonly name: string;
   private readonly ls: LocalStorage;
   private readonly defaultValue: T;
+  public readonly type: string;
 
   constructor(name: string, defaultValue: T, ls: LocalStorage) {
     this.name = name;
     this.defaultValue = defaultValue;
     this.ls = ls;
+    this.type = typeof this.defaultValue;
   }
 
   private variableName = (domain?: Domain) => "VARIABLES_" + (domain !== undefined ? domain.toString() : "");
@@ -51,11 +53,27 @@ export class Variable<T> {
   /**
    * Set the value of this variable in a global or specific domain.
    */
-  public set = (value: T, domain?: Domain): void => {
+  public set = (value: T | string, domain?: Domain): boolean => {
+    // If value is given as a string and the internal value is not a string, it means that the value is stringified
+    if (this.type !== "string" && typeof value === "string") {
+      // Try to parse the value
+      try {
+        value = JSON.parse(value);
+      } catch {
+        return false;
+      }
+    }
+
+    // Check that the value is of correct type
+    if (typeof value !== this.type) {
+      return false;
+    }
+
     const d = this.getPersistent(domain);
 
     d[this.name] = value;
     this.setPersistent(d, domain);
+    return true;
   };
 
   /**

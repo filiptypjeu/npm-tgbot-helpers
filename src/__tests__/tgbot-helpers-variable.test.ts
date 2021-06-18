@@ -15,9 +15,24 @@ test("get default values with no domain", () => {
 });
 
 test("set and get values with no domain", () => {
-  var1.set("AAA")
+  // Set string variable
+  expect(var1.set("AAA")).toEqual(true);
   expect(var1.get()).toEqual("AAA");
-  var2.set(456)
+
+  // Set number variable with number
+  expect(var2.set(321)).toEqual(true);
+  expect(var2.get()).toEqual(321);
+
+  // Set number variable with string not passing JSON.parse()
+  expect(var2.set("abc")).toEqual(false);
+  expect(var2.get()).toEqual(321);
+
+  // Set number variable with string not parsed to number
+  expect(var2.set("{}")).toEqual(false);
+  expect(var2.get()).toEqual(321);
+
+  // Set number variable with ok string
+  expect(var2.set("456")).toEqual(true);
   expect(var2.get()).toEqual(456);
 });
 
@@ -28,11 +43,12 @@ test("get default values with domain", () => {
 });
 
 test("set and get values with domain", () => {
-  var1.set("BBB", "abcd");
+  // Set string variable
+  expect(var1.set("BBB", "abcd")).toEqual(true);
   expect(var1.get("abcd")).toEqual("BBB");
-  var1.set("789", 1234)
+  expect(var1.set("789", 1234)).toEqual(true);
   expect(var1.get("1234")).toEqual("789");
-  var2.set(789, "1234")
+  expect(var2.set(789, "1234")).toEqual(true);
   expect(var2.get(1234)).toEqual(789);
 });
 
@@ -67,10 +83,14 @@ d.c = {
 };
 
 test("set and get value for complex type", () => {
-  var3.set(d)
+  expect(var3.set(d)).toEqual(true);
   expect(var3.get()).toEqual(d);
-  var3.set(d, 1234)
+  expect(var3.set(d, 1234)).toEqual(true);
   expect(var3.get(1234)).toEqual(d);
+  expect(var3.set("{}", 1234)).toEqual(true);
+  expect(var3.get(1234)).toEqual({});
+  expect(var3.set('{"a":"almost ok}', 1234)).toEqual(false);
+  expect(var3.get(1234)).toEqual({});
 
   expect(ls.getItem("VARIABLES_")).toEqual('{"var1":"AAA","var2":456,"var3":{"a":["a"],"b":[42,43],"c":{"a":["b","c"],"b":[2,3]}}}');
 });
@@ -91,4 +111,10 @@ test("reset values with domain", () => {
   expect(var2.get(1234)).toEqual(123);
   var3.reset(1234);
   expect(ls.getItem("VARIABLES_1234")).toEqual('{}');
+});
+
+test("test type", () => {
+  expect(var1.type).toEqual("string");
+  expect(var2.type).toEqual("number");
+  expect(var3.type).toEqual("object");
 });
