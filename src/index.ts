@@ -81,19 +81,6 @@ export interface IBotHelperCommand {
 type Command = string;
 export type ChatID = string | number;
 
-let bot: TelegramBot;
-let ls: LocalStorage;
-
-const startTime = new Date();
-let deactivatedCommands: Group;
-let commands: IBotHelperCommand[] = [];
-const groups: Group[] = [];
-let sudoGroup: Group;
-let vars: Variable<any>[] = [];
-let commandLogger: Logger | undefined;
-let botLogger: Logger | undefined;
-let errorLogger: Logger | undefined;
-
 /**
  * Creates a RegExp for a command.
  *
@@ -162,14 +149,14 @@ export const initBot = (initWith: IBotHelperInit): TelegramBot => {
       groups.push(g);
     } else {
       groups.push(g.group);
-      commands.push({
+      this.addCommand({
         command: g.requestCommand,
         chatAcion: g.requestResponse ? "typing" : undefined,
         privateOnly: g.requestPrivateOnly,
         description: g.requestDescription,
         callback: defaultCommandRequest(g.group, g.sendRequestTo, g.requestResponse, g.toggleCommand),
       });
-      commands.push({
+      this.addCommand({
         command: g.toggleCommand,
         chatAcion: "typing",
         group: g.sendRequestTo,
@@ -899,3 +886,257 @@ export const defaultCommandGroups = () => {
     }
   };
 };
+
+
+export class TGBotWrapper {
+  public bot: TelegramBot;
+  public ls: LocalStorage;
+
+  public commands: IBotHelperCommand[] = [];
+  public groups: Group[] = [];
+  public variables: Variable<any>[] = [];
+
+  public startTime: Date;
+  public deactivatedCommands: Group;
+  public sudoGroup: Group;
+
+  public commandLogger: Logger | undefined;
+  public botLogger: Logger | undefined;
+  public errorLogger: Logger | undefined;
+
+  constructor(o: IBotHelperInit) {
+    this.startTime = new Date();
+    this.bot = new TelegramBot(o.telegramBotToken, { polling: true });
+    this.deactivatedCommands = new Group("deactivatedCommands", this.ls);
+    this.ls = o.localStorage;
+    this.sudoGroup = o.sudoGroup;
+    this.commandLogger = o.commandLogger;
+    this.botLogger = o.botLogger;
+    this.errorLogger = o.errorLogger;
+
+    // Add all groups
+    for (const group of o.groups || []) {
+      if (group instanceof Group) {
+        this.addGroup(group);
+      } else {
+        this.addGroup(group.group);
+
+        // Add request and group toggle commands
+        this.addCommand({
+          command: group.requestCommand,
+          chatAcion: group.requestResponse ? "typing" : undefined,
+          privateOnly: group.requestPrivateOnly,
+          description: group.requestDescription,
+          callback: defaultCommandRequest(group.group, group.sendRequestTo, group.requestResponse, group.toggleCommand),
+        });
+        this.addCommand({
+          command: group.toggleCommand,
+          chatAcion: "typing",
+          group: group.sendRequestTo,
+          matchBeginningOnly: true,
+          description: group.toggleDescription,
+          callback: defaultCommandToggle(group.group, group.responseWhenAdded),
+        });
+      }
+    }
+
+    // Add default commands
+
+    if (o.defaultCommands?.deactivate) {
+      this.addCommand({
+        command: o.defaultCommands.deactivate,
+        group: o.sudoGroup,
+        chatAcion: "typing",
+        description: "Deactivates or reactivates a given command.",
+        callback: defaultCommandDeactivate,
+      });
+    }
+
+    if (o.defaultCommands?.help) {
+      this.addCommand({
+        command: o.defaultCommands.help,
+        chatAcion: "typing",
+        callback: defaultCommandHelp,
+      });
+    }
+
+    if (o.defaultCommands?.init) {
+      this.addCommand({
+        command: o.defaultCommands.init,
+        chatAcion: "typing",
+        privateOnly: true,
+        hide: true,
+        callback: defaultCommandInit(o.sudoGroup),
+      });
+    }
+
+    if (o.defaultCommands?.kill) {
+      this.addCommand({
+        command: o.defaultCommands.kill,
+        group: o.sudoGroup,
+        privateOnly: true,
+        chatAcion: "typing",
+        description: "Kill the bot.",
+        callback: defaultCommandKill,
+      });
+    }
+
+    if (o.defaultCommands?.start) {
+      this.addCommand({
+        command: "start",
+        chatAcion: "typing",
+        callback: defaultCommandStart(o.defaultCommands.start.greeting, o.defaultCommands.start.addToGroup, o.sudoGroup),
+        description: o.defaultCommands.start.description,
+      });
+    }
+
+    if (o.defaultCommands?.uptime) {
+      this.addCommand({
+        command: o.defaultCommands.uptime,
+        group: o.sudoGroup,
+        chatAcion: "typing",
+        description: "Get the bot and system uptime.",
+        callback: defaultCommandUptime,
+      });
+    }
+
+    if (o.defaultCommands?.ip) {
+      this.addCommand({
+        command: o.defaultCommands.ip,
+        group: o.sudoGroup,
+        chatAcion: "typing",
+        description: "Get the IP of the system.",
+        callback: defaultCommandIP,
+      });
+    }
+
+    if (o.defaultCommands?.commands) {
+      this.addCommand({
+        command: o.defaultCommands.commands.command,
+        group: o.defaultCommands.commands.availableFor,
+        chatAcion: "typing",
+        description: o.defaultCommands.commands.description,
+        callback: defaultCommandCommands,
+      });
+    }
+
+    if (o.defaultCommands?.var) {
+      this.addCommand({
+        command: o.defaultCommands.var,
+        group: o.sudoGroup,
+        privateOnly: true,
+        chatAcion: "typing",
+        description: `See all available variables. Set variables with "/var &lt;number&gt; &lt;value&gt;".`,
+        callback: defaultCommandVar(),
+      });
+    }
+
+    if (o.defaultCommands?.groups) {
+      this.addCommand({
+        command: o.defaultCommands.groups,
+        group: o.sudoGroup,
+        privateOnly: true,
+        chatAcion: "typing",
+        description: "Gives the members of a specific group.",
+        callback: defaultCommandGroups(),
+      });
+    }
+
+    if (o.defaultCommands?.userInfo) {
+      this.addCommand({
+        command: o.defaultCommands.userInfo,
+        group: o.sudoGroup,
+        chatAcion: "typing",
+        callback: defaultCommandUptime,
+      });
+    }
+
+    // Add the user defined commands
+    for (const c of o.commands || []) {
+      this.addCommand(c);
+    }
+
+    // Add user defined variables
+    for (const v of o.variables || []) {
+      this.addVariable(v);
+    }
+
+    this.bot.getMe().then(user => {
+      // Add a separate listener for each command
+      this.commands.forEach(async c => {
+        this.bot.onText(commandRegExp(c, user.username!), msg => {
+          let log = "ok";
+
+          // XXX: Check access first
+          // Check if the command is deactivated
+          if (!this.sudoGroup.isMember(msg.chat.id) && this.deactivatedCommands.isMember(`/${c}`)) {
+            sendTo(
+              msg.chat.id,
+              o.defaultPrivateOnlyMessage ? o.defaultPrivateOnlyMessage : "This command has been deactivated."
+            );
+            log = "deactivated";
+          } else if (c.group && !c.group.isMember(msg.chat.id)) {
+            sendTo(
+              msg.chat.id,
+              c.accessDeniedMessage
+                ? c.accessDeniedMessage
+                : o.defaultAccessDeniedMessage
+                ? o.defaultAccessDeniedMessage
+                : "You dont have access to this command."
+            );
+            log = "denied";
+          } else if (c.privateOnly && msg.chat.type !== "private") {
+            sendTo(
+              msg.chat.id,
+              o.defaultPrivateOnlyMessage ? o.defaultPrivateOnlyMessage : "The command can only be used in a private chat."
+            );
+            log = "private";
+          }
+
+          // Log the command
+          this.commandLogger?.info(`${longNameFromUser(msg.from!)} : /${c.command} [${log}]`);
+
+          if (log !== "ok") {
+            return;
+          }
+
+          if (c.chatAcion) {
+            this.bot.sendChatAction(msg.chat.id, c.chatAcion);
+          }
+
+          return c.callback(msg);
+        });
+      });
+    });
+
+    this.botLogger?.info(`Telegram bot initialized with ${this.commands.length} commands, ${this.groups.length} groups and ${this.variables.length} variables.`);
+
+    if (o.whenOnline) {
+      o.whenOnline();
+    }
+  };
+
+  private addCommand = (command: IBotHelperCommand) => {
+    if (this.commands.find(c => c.command === command.command)) {
+      throw(`Duplicate command "${command.command}"`);
+    }
+
+    this.commands.push(command);
+  }
+
+  private addGroup = (group: Group) => {
+    if (this.groups.find(g => g.name === group.name)) {
+      throw(`Duplicate group "${group.name}"`);
+    }
+
+    this.groups.push(group);
+  }
+
+  private addVariable = (variable: Variable<unknown>) => {
+    if (this.variables.find(v => v.name === variable.name)) {
+      throw(`Duplicate variable "${variable.name}"`);
+    }
+
+    this.variables.push(variable);
+  }
+}
