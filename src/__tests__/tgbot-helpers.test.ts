@@ -6,11 +6,16 @@ import { Group } from "../Group";
 jest.mock("node-telegram-bot-api", () => {
   return jest.fn().mockImplementation(() => {
     return {
+      TelegramBot: jest.fn(),
       getMe: (): Promise<TelegramBot.User> => {
         return new Promise(resolve => resolve({ username: "botname" } as TelegramBot.User));
       },
       getChat: jest.fn(),
       sendMessage: jest.fn(),
+      onText: jest.fn(),
+      startPolling: jest.fn(),
+      isPolling: jest.fn(),
+      on: jest.fn(),
     };
   });
 });
@@ -23,9 +28,41 @@ const sudoGroup = new Group("admin", ls).reset();
 sudoGroup.add(33333);
 
 const wrapper = new TGBotWrapper({
-  telegramBotToken: "token",
+  telegramBot: new TelegramBot("token"),
   localStorage: ls,
   sudoGroup,
+  defaultCommands: {
+    start: {
+      greeting: "hello",
+    },
+    var: "var",
+    init: "init",
+  },
+});
+
+wrapper.addCustomCommands([
+  {
+    command: "mycommand",
+    callback: () => {},
+  },
+  {
+    command: "myothercommand",
+    group: sudoGroup,
+    callback: () => {},
+  }
+]);
+
+test("commands and commandsByGroup", () => {
+  expect(wrapper.commands).toHaveLength(5);
+  expect(wrapper.bot.onText).toHaveBeenCalledTimes(5);
+
+  const c = wrapper.commandsByGroup();
+  expect(c.get(undefined)).toHaveLength(3);
+  expect(c.get(sudoGroup)).toHaveLength(2);
+});
+
+test("username", async () => {
+  expect((await wrapper.thisUser).username).toEqual("botname");
 });
 
 test("getArguments", () => {
@@ -108,7 +145,7 @@ test("sendTo", () => {
     disable_web_page_preview: false,
   });
 
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(3);
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(4);
 });
 
 test("sendToGroup", () => {
@@ -125,7 +162,7 @@ test("sendToGroup", () => {
     disable_web_page_preview: false,
   });
 
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(5);
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(6);
 });
 
 test("sendError", () => {
@@ -137,7 +174,7 @@ test("sendError", () => {
     disable_web_page_preview: false,
   });
 
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(6);
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(7);
 });
 
 test("sendTo SendMessageOptions", () => {
@@ -150,7 +187,7 @@ test("sendTo SendMessageOptions", () => {
     disable_web_page_preview: true,
   });
 
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(7);
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(8);
 });
 
 test("sendTo sanitize HTML", () => {
@@ -161,7 +198,7 @@ test("sendTo sanitize HTML", () => {
     disable_web_page_preview: false,
   });
 
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(8);
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(9);
 });
 
 test("groupToUserInfo", () => {

@@ -6,13 +6,14 @@ import sanitizeHtml from "sanitize-html";
 import { Logger } from "log4js";
 import { Group } from "./Group";
 export { Group } from "./Group";
-import { Variable } from "./Variable";
+import { BooleanVariable, Variable } from "./Variable";
 export { Variable } from "./Variable";
 
 /**
  * @todo
  * - Command allowed for multiple groups
  * - Better info about a user, and a separate command
+ * - Add default log command
  */
 
 export interface IGroupExtended {
@@ -27,12 +28,10 @@ export interface IGroupExtended {
   responseWhenAdded?: string;
 }
 
-export interface IBotHelperInit {
-  telegramBotToken: string;
-  telegramBotName?: string;
+export interface ITGBotWrapperOptions {
+  telegramBot: TelegramBot;
   localStorage: LocalStorage;
   variables?: Variable<any>[];
-  commands?: IBotHelperCommand[];
   defaultCommands?: {
     init?: Command;
     uptime?: Command;
@@ -62,7 +61,6 @@ export interface IBotHelperInit {
   defaultAccessDeniedMessage?: string;
   defaultPrivateOnlyMessage?: string;
   defaultCommandDeactivatedMessage?: string;
-  whenOnline?: () => void;
 }
 
 export interface IBotHelperCommand {
@@ -83,46 +81,67 @@ export type ChatID = string | number;
 
 export class TGBotWrapper {
   public bot: TelegramBot;
-  public ls: LocalStorage;
+  private ls: LocalStorage;
 
+  public thisUser: Promise<TelegramBot.User>;
   public commands: IBotHelperCommand[] = [];
   public groups: Group[] = [];
+
+  public sudoEchoVar: BooleanVariable;
+  public sudoLogVar: BooleanVariable;
   public variables: Variable<any>[] = [];
 
   public startTime: Date;
   public deactivatedCommands: Group;
-  public sudoGroup: Group;
+  private sudoGroup: Group;
 
-  public commandLogger: Logger | undefined;
-  public botLogger: Logger | undefined;
-  public errorLogger: Logger | undefined;
+  private commandLogger: Logger | undefined;
+  private botLogger: Logger | undefined;
+  private errorLogger: Logger | undefined;
 
-  constructor(o: IBotHelperInit) {
+  public defaultAccessDeniedMessage: string;
+  public defaultCommandDeactivatedMessage: string;
+  public defaultPrivateOnlyMessage: string;
+
+  constructor(o: ITGBotWrapperOptions) {
+    this.bot = o.telegramBot;
+    if (!this.bot.isPolling()) {
+      this.bot.startPolling();
+    }
+    this.thisUser = this.bot.getMe();
+
     this.startTime = new Date();
-    this.bot = new TelegramBot(o.telegramBotToken, { polling: true });
-    this.deactivatedCommands = new Group("deactivatedCommands", this.ls);
     this.ls = o.localStorage;
+
+    this.sudoEchoVar = new BooleanVariable("sudoEcho", false, this.ls);
+    this.sudoLogVar = new BooleanVariable("sudoLog", false, this.ls);
+    this.deactivatedCommands = new Group("deactivatedCommands", this.ls);
+
     this.sudoGroup = o.sudoGroup;
     this.commandLogger = o.commandLogger;
     this.botLogger = o.botLogger;
     this.errorLogger = o.errorLogger;
 
+    this.defaultAccessDeniedMessage = o.defaultAccessDeniedMessage || "You dont have access to this command.";
+    this.defaultCommandDeactivatedMessage = o.defaultCommandDeactivatedMessage || "This command has been deactivated.";
+    this.defaultPrivateOnlyMessage = o.defaultPrivateOnlyMessage || "The command can only be used in a private chat.";
+
     // Add all groups
     for (const group of o.groups || []) {
       if (group instanceof Group) {
-        this.addGroup(group);
+        this._addGroup(group);
       } else {
-        this.addGroup(group.group);
+        this._addGroup(group.group);
 
         // Add request and group toggle commands
-        this.addCommand({
+        this._addCommand({
           command: group.requestCommand,
           chatAcion: group.requestResponse ? "typing" : undefined,
           privateOnly: group.requestPrivateOnly,
           description: group.requestDescription,
           callback: this.defaultCommandRequest(group.group, group.sendRequestTo, group.requestResponse, group.toggleCommand),
         });
-        this.addCommand({
+        this._addCommand({
           command: group.toggleCommand,
           chatAcion: "typing",
           group: group.sendRequestTo,
@@ -136,7 +155,7 @@ export class TGBotWrapper {
     // Add default commands
 
     if (o.defaultCommands?.deactivate) {
-      this.addCommand({
+      this._addCommand({
         command: o.defaultCommands.deactivate,
         group: o.sudoGroup,
         chatAcion: "typing",
@@ -146,7 +165,7 @@ export class TGBotWrapper {
     }
 
     if (o.defaultCommands?.help) {
-      this.addCommand({
+      this._addCommand({
         command: o.defaultCommands.help,
         chatAcion: "typing",
         callback: this.defaultCommandHelp,
@@ -154,7 +173,7 @@ export class TGBotWrapper {
     }
 
     if (o.defaultCommands?.init) {
-      this.addCommand({
+      this._addCommand({
         command: o.defaultCommands.init,
         chatAcion: "typing",
         privateOnly: true,
@@ -164,7 +183,7 @@ export class TGBotWrapper {
     }
 
     if (o.defaultCommands?.kill) {
-      this.addCommand({
+      this._addCommand({
         command: o.defaultCommands.kill,
         group: o.sudoGroup,
         privateOnly: true,
@@ -175,7 +194,7 @@ export class TGBotWrapper {
     }
 
     if (o.defaultCommands?.start) {
-      this.addCommand({
+      this._addCommand({
         command: "start",
         chatAcion: "typing",
         callback: this.defaultCommandStart(o.defaultCommands.start.greeting, o.defaultCommands.start.addToGroup, o.sudoGroup),
@@ -184,7 +203,7 @@ export class TGBotWrapper {
     }
 
     if (o.defaultCommands?.uptime) {
-      this.addCommand({
+      this._addCommand({
         command: o.defaultCommands.uptime,
         group: o.sudoGroup,
         chatAcion: "typing",
@@ -194,7 +213,7 @@ export class TGBotWrapper {
     }
 
     if (o.defaultCommands?.ip) {
-      this.addCommand({
+      this._addCommand({
         command: o.defaultCommands.ip,
         group: o.sudoGroup,
         chatAcion: "typing",
@@ -204,7 +223,7 @@ export class TGBotWrapper {
     }
 
     if (o.defaultCommands?.commands) {
-      this.addCommand({
+      this._addCommand({
         command: o.defaultCommands.commands.command,
         group: o.defaultCommands.commands.availableFor,
         chatAcion: "typing",
@@ -214,7 +233,7 @@ export class TGBotWrapper {
     }
 
     if (o.defaultCommands?.var) {
-      this.addCommand({
+      this._addCommand({
         command: o.defaultCommands.var,
         group: o.sudoGroup,
         privateOnly: true,
@@ -225,7 +244,7 @@ export class TGBotWrapper {
     }
 
     if (o.defaultCommands?.groups) {
-      this.addCommand({
+      this._addCommand({
         command: o.defaultCommands.groups,
         group: o.sudoGroup,
         privateOnly: true,
@@ -236,7 +255,7 @@ export class TGBotWrapper {
     }
 
     if (o.defaultCommands?.userInfo) {
-      this.addCommand({
+      this._addCommand({
         command: o.defaultCommands.userInfo,
         group: o.sudoGroup,
         chatAcion: "typing",
@@ -244,79 +263,89 @@ export class TGBotWrapper {
       });
     }
 
-    // Add the user defined commands
-    for (const c of o.commands || []) {
-      this.addCommand(c);
-    }
+    // Add internal variables
+    this._addVariable(this.sudoEchoVar);
+    this._addVariable(this.sudoLogVar);
 
     // Add user defined variables
     for (const v of o.variables || []) {
-      this.addVariable(v);
+      this._addVariable(v);
     }
 
-    this.bot.getMe().then(user => {
-      // Add a separate listener for each command
-      this.commands.forEach(async c => {
-        this.bot.onText(this.commandRegExp(c, user.username!), msg => {
-          let log = "ok";
+    // Add debug listener
+    this.bot.on("message", msg => {
+      if (msg.from && this.sudoGroup.isMember(msg.from.id)) {
+        if (this.sudoLogVar.get()) {
+          this.botLogger.info(msg);
+        }
 
-          // XXX: Check access first
-          // Check if the command is deactivated
-          if (!this.sudoGroup.isMember(msg.chat.id) && this.deactivatedCommands.isMember(`/${c}`)) {
-            this.sendTo(msg.chat.id, o.defaultPrivateOnlyMessage ? o.defaultPrivateOnlyMessage : "This command has been deactivated.");
-            log = "deactivated";
-          } else if (c.group && !c.group.isMember(msg.chat.id)) {
-            this.sendTo(
-              msg.chat.id,
-              c.accessDeniedMessage
-                ? c.accessDeniedMessage
-                : o.defaultAccessDeniedMessage
-                ? o.defaultAccessDeniedMessage
-                : "You dont have access to this command."
-            );
-            log = "denied";
-          } else if (c.privateOnly && msg.chat.type !== "private") {
-            this.sendTo(
-              msg.chat.id,
-              o.defaultPrivateOnlyMessage ? o.defaultPrivateOnlyMessage : "The command can only be used in a private chat."
-            );
-            log = "private";
-          }
-
-          // Log the command
-          this.commandLogger?.info(`${this.longNameFromUser(msg.from!)} : /${c.command} [${log}]`);
-
-          if (log !== "ok") {
-            return;
-          }
-
-          if (c.chatAcion) {
-            this.bot.sendChatAction(msg.chat.id, c.chatAcion);
-          }
-
-          return c.callback(msg);
-        });
-      });
+        if (this.sudoEchoVar.get()) {
+          this.sendTo(msg.chat.id, JSON.stringify(msg, null, 4));
+        }
+      }
     });
 
-    this.botLogger?.info(
-      `Telegram bot initialized with ${this.commands.length} commands, ${this.groups.length} groups and ${this.variables.length} variables.`
-    );
-
-    if (o.whenOnline) {
-      o.whenOnline();
-    }
+    this.onInit();
   }
 
-  private addCommand = (command: IBotHelperCommand) => {
+  public addCustomCommands = async (commands: IBotHelperCommand[]) => {
+    for (const c of commands) {
+      this._addCommand(c);
+    }
+
+    this.botLogger?.info(`Added ${commands.length} custom commands.`);
+  }
+
+  private onInit = async () => {
+    const username = (await this.thisUser).username || "UNKNWON_BOT";
+
+    const msg = `${username} initialized with ${this.commands.length} commands, ${this.groups.length} groups and ${this.variables.length} variables.`;
+    this.botLogger?.info(msg);
+    this.sendToGroup(this.sudoGroup, msg).catch(() => {});
+  }
+
+  private _callback = (msg: TelegramBot.Message, c: IBotHelperCommand): boolean => {
+    let log = "ok";
+
+    // Check if the command is deactivated
+    if (c.group && !c.group.isMember(msg.chat.id)) {
+      this.sendTo(msg.chat.id, c.accessDeniedMessage || this.defaultAccessDeniedMessage);
+      log = "denied";
+    } else if (!this.sudoGroup.isMember(msg.chat.id) && this.deactivatedCommands.isMember(`/${c}`)) {
+      this.sendTo(msg.chat.id, this.defaultCommandDeactivatedMessage);
+      log = "deactivated";
+    } else if (c.privateOnly && msg.chat.type !== "private") {
+      this.sendTo(msg.chat.id, this.defaultPrivateOnlyMessage);
+      log = "private";
+    }
+
+    // Log the command
+    this.commandLogger?.info(`${this.longNameFromUser(msg.from!)} : /${c.command} [${log}]`);
+
+    return log === "ok";
+  }
+
+  private _addCommand = async (command: IBotHelperCommand) => {
     if (this.commands.find(c => c.command === command.command)) {
       throw new Error(`Duplicate command "${command.command}"`);
     }
 
+    this.bot.onText(this.commandRegExp(command, (await this.thisUser).username), msg => {
+      if (!this._callback(msg, command)) {
+        return;
+      }
+
+      if (command.chatAcion) {
+        this.bot.sendChatAction(msg.chat.id, command.chatAcion);
+      }
+
+      return command.callback(msg);
+    });
+
     this.commands.push(command);
   };
 
-  private addGroup = (group: Group) => {
+  private _addGroup = (group: Group) => {
     if (this.groups.find(g => g.name === group.name)) {
       throw new Error(`Duplicate group "${group.name}"`);
     }
@@ -324,7 +353,7 @@ export class TGBotWrapper {
     this.groups.push(group);
   };
 
-  private addVariable = (variable: Variable<unknown>) => {
+  private _addVariable = (variable: Variable<any>) => {
     if (this.variables.find(v => v.name === variable.name)) {
       throw new Error(`Duplicate variable "${variable.name}"`);
     }
@@ -351,10 +380,10 @@ export class TGBotWrapper {
    *
    * @returns A Map<string, IBotHelperCommand[]> that maps group name to commands.
    */
-  public groupByGroup = (cmds: IBotHelperCommand[]): Map<Group | undefined, IBotHelperCommand[]> => {
+  public commandsByGroup = (): Map<Group | undefined, IBotHelperCommand[]> => {
     // commandsByGroup()?
     const m = new Map<Group | undefined, IBotHelperCommand[]>();
-    cmds.forEach(cmd => {
+    this.commands.forEach(cmd => {
       const g = cmd.group;
       m.set(g, (m.get(g) || []).concat(cmd));
     });
@@ -412,13 +441,7 @@ export class TGBotWrapper {
   };
 
   public commandFriendlyUserId = (userId: ChatID, minusSubstitute: string = "m"): string => {
-    // XXX: string.replace()?
-    let s: string = userId.toString();
-    if (s.length && s[0] === "-") {
-      s = minusSubstitute + s.slice(1);
-    }
-
-    return s;
+    return userId.toString().replace("-", minusSubstitute);
   };
 
   /**
@@ -627,7 +650,7 @@ export class TGBotWrapper {
   };
 
   public defaultCommandCommands = (msg: TelegramBot.Message) => {
-    this.groupByGroup(this.commands).forEach((cmds, group) => {
+    this.commandsByGroup().forEach((cmds, group) => {
       if (!group || group.isMember(msg.chat.id)) {
         this.sendTo(
           msg.chat.id,
