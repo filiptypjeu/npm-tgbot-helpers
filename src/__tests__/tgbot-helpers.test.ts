@@ -49,7 +49,7 @@ wrapper.addCustomCommands([
     command: "myothercommand",
     group: sudoGroup,
     callback: () => {},
-  }
+  },
 ]);
 
 test("commands and commandsByGroup", () => {

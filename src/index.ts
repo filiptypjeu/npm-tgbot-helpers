@@ -294,7 +294,7 @@ export class TGBotWrapper {
     }
 
     this.botLogger?.info(`Added ${commands.length} custom commands.`);
-  }
+  };
 
   private onInit = async () => {
     const username = (await this.thisUser).username || "UNKNWON_BOT";
@@ -302,7 +302,7 @@ export class TGBotWrapper {
     const msg = `${username} initialized with ${this.commands.length} commands, ${this.groups.length} groups and ${this.variables.length} variables.`;
     this.botLogger?.info(msg);
     this.sendToGroup(this.sudoGroup, msg).catch(() => {});
-  }
+  };
 
   private _callback = (msg: TelegramBot.Message, c: IBotHelperCommand): boolean => {
     let log = "ok";
@@ -323,7 +323,7 @@ export class TGBotWrapper {
     this.commandLogger?.info(`${this.longNameFromUser(msg.from!)} : /${c.command} [${log}]`);
 
     return log === "ok";
-  }
+  };
 
   private _addCommand = async (command: IBotHelperCommand) => {
     if (this.commands.find(c => c.command === command.command)) {
