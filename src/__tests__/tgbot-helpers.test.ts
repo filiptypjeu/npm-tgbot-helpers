@@ -1,290 +1,213 @@
 import TelegramBot = require("node-telegram-bot-api");
 import { LocalStorage } from "node-localstorage";
-import {
-  properties,
-  initBot,
-  sendTo,
-  toggleUserIdInGroup,
-  addUserIdToGroup,
-  variableToBool,
-  variableToNumber,
-  variableToList,
-  variableToObject,
-  variable,
-  sendToGroup,
-  getArguments,
-  isInGroup,
-  sendError,
-  groupToUserInfo,
-  userVariable,
-  userIdFromCommand,
-  commandFriendlyUserId,
-  longNameFromUser,
-  commandRegExp,
-  IBotHelperCommand,
-} from "../index";
+import TGBotWrapper, { IBotHelperCommand } from "../index";
+import { Group } from "../Group";
 
 jest.mock("node-telegram-bot-api", () => {
   return jest.fn().mockImplementation(() => {
     return {
+      TelegramBot: jest.fn(),
       getMe: (): Promise<TelegramBot.User> => {
         return new Promise(resolve => resolve({ username: "botname" } as TelegramBot.User));
       },
       getChat: jest.fn(),
       sendMessage: jest.fn(),
+      onText: jest.fn(),
+      startPolling: jest.fn(),
+      isPolling: jest.fn(),
+      on: jest.fn(),
     };
   });
 });
 
-initBot({
-  telegramBotToken: "token",
-  localStoragePath: "./src/__tests__/variables/",
-  globalVariables: ["testVariable"],
-  userVariables: ["var1", "var2"],
-  errorGroup: "errorgroup",
+const ls = new LocalStorage("./src/__tests__/variables/");
+const group = new Group("mygroup", ls).reset();
+group.add(11111);
+group.add(22222);
+const sudoGroup = new Group("admin", ls).reset();
+sudoGroup.add(33333);
+
+const wrapper = new TGBotWrapper({
+  telegramBot: new TelegramBot("token"),
+  localStorage: ls,
+  sudoGroup,
+  defaultCommands: {
+    start: {
+      greeting: "hello",
+    },
+    var: "var",
+    init: "init",
+  },
 });
 
-const props = properties();
-const bot = props.telegramBot;
-const ls = props.localStorage;
+wrapper.addCustomCommands([
+  {
+    command: "mycommand",
+    callback: () => {},
+  },
+  {
+    command: "myothercommand",
+    group: sudoGroup,
+    callback: () => {},
+  }
+]);
 
-test("properties", () => {
-  // expect(bot).toEqual(expect.any(TelegramBot));
-  expect(ls).toEqual(expect.any(LocalStorage));
-  expect(props.globalVariables).toEqual(["testVariable"]);
-  expect(props.userVariables).toEqual(["var1", "var2"]);
+test("commands and commandsByGroup", () => {
+  expect(wrapper.commands).toHaveLength(5);
+  expect(wrapper.bot.onText).toHaveBeenCalledTimes(5);
+
+  const c = wrapper.commandsByGroup();
+  expect(c.get(undefined)).toHaveLength(3);
+  expect(c.get(sudoGroup)).toHaveLength(2);
 });
 
-test("variable", () => {
-  ls.setItem("v1", "123");
-  expect(variable("v1")).toEqual("123");
-
-  variable("v2", 1);
-  expect(variable("v2")).toEqual("1");
-
-  variable("v3", "string");
-  expect(variable("v3")).toEqual("string");
-});
-
-test("userVariable", () => {
-  expect(userVariable("test", "12345")).toEqual("test_12345");
-  expect(userVariable("test", 54321)).toEqual("test_54321");
-});
-
-test("variableToNumber", () => {
-  expect(variableToNumber("v1")).toEqual(123);
-  expect(variableToNumber("v2")).toEqual(1);
-  expect(variableToNumber("v3")).toEqual(0);
-  expect(variableToNumber("v1", 5)).toEqual(123);
-  expect(variableToNumber("v2", 5)).toEqual(1);
-  expect(variableToNumber("v3", 5)).toEqual(5);
-});
-
-test("variableToBool", () => {
-  expect(variableToBool("v1")).toEqual(false);
-  expect(variableToBool("v2")).toEqual(true);
-  expect(variableToBool("v3")).toEqual(false);
-});
-
-test("toggleUserIdInGroup", () => {
-  variable("group", "");
-  variable("errorgroup", "");
-  expect(toggleUserIdInGroup("group", 11111)).toEqual(true);
-  expect(toggleUserIdInGroup("group", 22222)).toEqual(true);
-  expect(toggleUserIdInGroup("group", 1)).toEqual(true);
-  expect(toggleUserIdInGroup("group", 1)).toEqual(false);
-  expect(toggleUserIdInGroup("errorgroup", 33333)).toEqual(true);
-});
-
-test("addUserIdToGroup", () => {
-  variable("newgroup", "");
-  addUserIdToGroup("newgroup", 11111);
-  addUserIdToGroup("newgroup", 22222);
-  expect(isInGroup("newgroup", 11111)).toEqual(true);
-  expect(isInGroup("newgroup", 22222)).toEqual(true);
-  expect(isInGroup("newgroup", 33333)).toEqual(false);
-});
-
-test("variableToList", () => {
-  expect(variableToList("group")).toEqual(["11111", "22222"]);
-  expect(variableToList("errorgroup")).toEqual(["33333"]);
-  expect(variableToList("notagroup")).toEqual([]);
-});
-
-test("variableToObject", () => {
-  variable("obj", "");
-  expect(variableToObject("obj")).toEqual({});
-
-  variableToObject("obj", "num", 5);
-  expect(variableToObject("obj")).toEqual({ num: 5 });
-
-  variableToObject("obj", "stringg", "246");
-  expect(variableToObject("obj")).toEqual({ num: 5, stringg: "246" });
-
-  variableToObject("obj", "anotherObject", { value: 7.4 });
-  expect(variableToObject("obj")).toEqual({ num: 5, stringg: "246", anotherObject: { value: 7.4 } });
-
-  variableToObject("obj", "num");
-  expect(variableToObject("obj")).toEqual({ stringg: "246", anotherObject: { value: 7.4 } });
-
-  variableToObject("obj", "num");
-  expect(variableToObject("obj")).toEqual({ stringg: "246", anotherObject: { value: 7.4 } });
-
-  variableToObject("obj", "anotherObject", "123");
-  expect(variableToObject("obj")).toEqual({ stringg: "246", anotherObject: "123" });
-});
-
-test("isInGroup", () => {
-  expect(isInGroup("group", 11111)).toEqual(true);
-  expect(isInGroup("group", 22222)).toEqual(true);
-  expect(isInGroup("group", 33333)).toEqual(false);
-  expect(isInGroup("errorgroup", 33333)).toEqual(true);
-  expect(isInGroup("notagroup", 11111)).toEqual(false);
+test("username", async () => {
+  expect((await wrapper.thisUser).username).toEqual("botname");
 });
 
 test("getArguments", () => {
-  expect(getArguments("/test a b c")).toEqual(["a", "b", "c"]);
-  expect(getArguments("test a b c")).toEqual(["a", "b", "c"]);
-  expect(getArguments("/test\na     b   \n\n   \n c   \n  ")).toEqual(["a", "b", "c"]);
+  expect(wrapper.getArguments("/test a b c")).toEqual(["a", "b", "c"]);
+  expect(wrapper.getArguments("test a b c")).toEqual(["a", "b", "c"]);
+  expect(wrapper.getArguments("/test\na     b   \n\n   \n c   \n  ")).toEqual(["a", "b", "c"]);
 });
 
 test("userIdFromCommand and getCommand", () => {
   const msg = { text: "/command_12345", entities: [{ type: "bot_command", offset: 0, length: 14 }] } as TelegramBot.Message;
 
-  expect(userIdFromCommand(msg)).toEqual(12345);
+  expect(wrapper.userIdFromCommand(msg)).toEqual(12345);
 
   msg.text = "/command_12345 more text";
   msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(userIdFromCommand(msg)).toEqual(12345);
+  expect(wrapper.userIdFromCommand(msg)).toEqual(12345);
 
   msg.text = "/command_12345@bot some text";
   msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(userIdFromCommand(msg)).toEqual(12345);
+  expect(wrapper.userIdFromCommand(msg)).toEqual(12345);
 
   msg.text = "/command_m12345@bot some text";
   msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(userIdFromCommand(msg)).toEqual(-12345);
+  expect(wrapper.userIdFromCommand(msg)).toEqual(-12345);
 
   msg.text = "/command_12345";
   msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(userIdFromCommand(msg, "3", "4")).toEqual(-5);
+  expect(wrapper.userIdFromCommand(msg, "3", "4")).toEqual(-5);
 
   msg.text = "/commandAB12345@bot some text";
   msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(userIdFromCommand(msg, "A", "B")).toEqual(-12345);
+  expect(wrapper.userIdFromCommand(msg, "A", "B")).toEqual(-12345);
 
   msg.text = "/commandA12345@bot some text";
   msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(userIdFromCommand(msg)).toEqual(undefined);
+  expect(wrapper.userIdFromCommand(msg)).toEqual(undefined);
 
   msg.text = "/command_abc";
   msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(userIdFromCommand(msg)).toEqual(undefined);
+  expect(wrapper.userIdFromCommand(msg)).toEqual(undefined);
 
   msg.text = "/command_12.345";
   msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(userIdFromCommand(msg)).toEqual(undefined);
+  expect(wrapper.userIdFromCommand(msg)).toEqual(undefined);
 
   msg.text = "/command_12345";
   msg.entities![0]!.length = msg.text.split(" ")[0].length;
   msg.entities![0]!.offset = 1;
-  expect(userIdFromCommand(msg)).toEqual(undefined);
+  expect(wrapper.userIdFromCommand(msg)).toEqual(undefined);
 });
 
 test("commandFriendlyUserId", () => {
-  expect(commandFriendlyUserId(12345)).toEqual("12345");
-  expect(commandFriendlyUserId("12345")).toEqual("12345");
-  expect(commandFriendlyUserId(-12345)).toEqual("m12345");
-  expect(commandFriendlyUserId("-12345")).toEqual("m12345");
-  expect(commandFriendlyUserId(-12345, "MINUS")).toEqual("MINUS12345");
-  expect(commandFriendlyUserId("-12345", "MINUS")).toEqual("MINUS12345");
+  expect(wrapper.commandFriendlyUserId(12345)).toEqual("12345");
+  expect(wrapper.commandFriendlyUserId("12345")).toEqual("12345");
+  expect(wrapper.commandFriendlyUserId(-12345)).toEqual("m12345");
+  expect(wrapper.commandFriendlyUserId("-12345")).toEqual("m12345");
+  expect(wrapper.commandFriendlyUserId(-12345, "MINUS")).toEqual("MINUS12345");
+  expect(wrapper.commandFriendlyUserId("-12345", "MINUS")).toEqual("MINUS12345");
 });
 
 test("sendTo", () => {
-  expect(sendTo(123, "message")).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
+  expect(wrapper.sendTo(123, "message")).rejects.toThrowError();
+  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
     parse_mode: undefined,
     disable_notification: false,
     disable_web_page_preview: false,
   });
 
-  expect(sendTo(123, "message", "HTML")).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
+  expect(wrapper.sendTo(123, "message", "HTML")).rejects.toThrowError();
+  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
     parse_mode: "HTML",
     disable_notification: false,
     disable_web_page_preview: false,
   });
 
-  expect(sendTo(123, "message", "Markdown")).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
+  expect(wrapper.sendTo(123, "message", "Markdown")).rejects.toThrowError();
+  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
     parse_mode: "Markdown",
     disable_notification: false,
     disable_web_page_preview: false,
   });
 
-  expect(bot.sendMessage).toHaveBeenCalledTimes(3);
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(4);
 });
 
 test("sendToGroup", () => {
-  expect(sendToGroup("group", "message")).rejects.toThrowError();
+  expect(wrapper.sendToGroup(group, "message")).rejects.toThrowError();
 
-  expect(bot.sendMessage).toHaveBeenCalledWith("11111", "message", {
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledWith("11111", "message", {
     parse_mode: undefined,
     disable_notification: false,
     disable_web_page_preview: false,
   });
-  expect(bot.sendMessage).toHaveBeenCalledWith("22222", "message", {
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledWith("22222", "message", {
     parse_mode: undefined,
     disable_notification: false,
     disable_web_page_preview: false,
   });
 
-  expect(bot.sendMessage).toHaveBeenCalledTimes(5);
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(6);
 });
 
 test("sendError", () => {
-  expect(sendError("Error")).rejects.toThrowError();
+  expect(wrapper.sendError("Error")).rejects.toThrowError();
 
-  expect(bot.sendMessage).toHaveBeenLastCalledWith("33333", "Error", {
+  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith("33333", "Error", {
     parse_mode: undefined,
     disable_notification: false,
     disable_web_page_preview: false,
   });
 
-  expect(bot.sendMessage).toHaveBeenCalledTimes(6);
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(7);
 });
 
 test("sendTo SendMessageOptions", () => {
   expect(
-    sendTo(123, "message", { parse_mode: "Markdown", disable_web_page_preview: true, disable_notification: true })
+    wrapper.sendTo(123, "message", { parse_mode: "Markdown", disable_web_page_preview: true, disable_notification: true })
   ).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
+  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
     parse_mode: "Markdown",
     disable_notification: true,
     disable_web_page_preview: true,
   });
 
-  expect(bot.sendMessage).toHaveBeenCalledTimes(7);
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(8);
 });
 
 test("sendTo sanitize HTML", () => {
-  expect(sendTo(123, "<b>text</b><<>&text<i>texxxttt</i>&", "HTML", true)).rejects.toThrowError();
-  expect(bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", {
+  expect(wrapper.sendTo(123, "<b>text</b><<>&text<i>texxxttt</i>&", "HTML", true)).rejects.toThrowError();
+  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", {
     parse_mode: "HTML",
     disable_notification: true,
     disable_web_page_preview: false,
   });
 
-  expect(bot.sendMessage).toHaveBeenCalledTimes(8);
+  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(9);
 });
 
 test("groupToUserInfo", () => {
-  expect(groupToUserInfo("group")).rejects.toThrowError();
+  expect(wrapper.groupToUserInfo(group)).rejects.toThrowError();
 
-  expect(bot.getChat).toHaveBeenCalledWith("11111");
-  expect(bot.getChat).toHaveBeenCalledWith("22222");
+  expect(wrapper.bot.getChat).toHaveBeenCalledWith("11111");
+  expect(wrapper.bot.getChat).toHaveBeenCalledWith("22222");
 
-  expect(bot.getChat).toHaveBeenCalledTimes(2);
+  expect(wrapper.bot.getChat).toHaveBeenCalledTimes(2);
 });
 
 test("longNameFromUser with username", () => {
@@ -292,13 +215,13 @@ test("longNameFromUser with username", () => {
     username: "USERNAME",
   } as TelegramBot.User;
 
-  expect(longNameFromUser(u)).toEqual("@USERNAME");
+  expect(wrapper.longNameFromUser(u)).toEqual("@USERNAME");
 
   u.first_name = "FIRSTNAME";
-  expect(longNameFromUser(u)).toEqual("FIRSTNAME @USERNAME");
+  expect(wrapper.longNameFromUser(u)).toEqual("FIRSTNAME @USERNAME");
 
   u.last_name = "LASTNAME";
-  expect(longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME @USERNAME");
+  expect(wrapper.longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME @USERNAME");
 });
 
 test("longNameFromUser no username", () => {
@@ -306,10 +229,10 @@ test("longNameFromUser no username", () => {
     first_name: "FIRSTNAME",
   } as TelegramBot.User;
 
-  expect(longNameFromUser(u)).toEqual("FIRSTNAME");
+  expect(wrapper.longNameFromUser(u)).toEqual("FIRSTNAME");
 
   u.last_name = "LASTNAME";
-  expect(longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME");
+  expect(wrapper.longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME");
 });
 
 test("longNameFromUser with title", () => {
@@ -320,7 +243,7 @@ test("longNameFromUser with title", () => {
     username: "USERNAME",
   } as TelegramBot.Chat;
 
-  expect(longNameFromUser(u)).toEqual("TITLE");
+  expect(wrapper.longNameFromUser(u)).toEqual("TITLE");
 });
 
 test("regexp", () => {
@@ -329,7 +252,7 @@ test("regexp", () => {
     callback: () => {},
   };
 
-  const regexp = commandRegExp(cmd, "botname");
+  const regexp = wrapper.commandRegExp(cmd, "botname");
 
   let res = true;
 
@@ -381,7 +304,7 @@ test("regexp matchBeginningOnly", () => {
     matchBeginningOnly: true,
   };
 
-  const regexp = commandRegExp(cmd, "botname");
+  const regexp = wrapper.commandRegExp(cmd, "botname");
 
   let res = true;
 
