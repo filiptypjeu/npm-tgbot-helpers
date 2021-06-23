@@ -9,6 +9,13 @@ ls.removeItem("VARIABLES_abcd");
 const var1 = new Variable<string>("var1", "hello", ls);
 const var2 = new Variable<number>("var2", 123, ls);
 
+test("correct item names", () => {
+  expect(var1.itemName()).toEqual("VARIABLES_");
+  expect(var2.itemName()).toEqual("VARIABLES_");
+  expect(var1.itemName(1234)).toEqual("VARIABLES_1234");
+  expect(var2.itemName("1234")).toEqual("VARIABLES_1234");
+});
+
 test("get default values with no domain", () => {
   expect(var1.get()).toEqual("hello");
   expect(var2.get()).toEqual(123);

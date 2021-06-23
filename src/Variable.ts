@@ -14,8 +14,8 @@ interface IPersistent {
 
 abstract class InternalVariable<T> {
   public readonly name: string;
-  protected readonly ls: LocalStorage;
-  protected readonly defaultValue: T;
+  public readonly ls: LocalStorage;
+  public readonly defaultValue: T;
   public readonly type: string;
 
   constructor(name: string, defaultValue: T, ls: LocalStorage) {
@@ -25,15 +25,15 @@ abstract class InternalVariable<T> {
     this.type = typeof this.defaultValue;
   }
 
-  protected variableName = (domain?: Domain) => "VARIABLES_" + (domain !== undefined ? domain.toString() : "");
+  public itemName = (domain?: Domain) => "VARIABLES_" + (domain !== undefined ? domain.toString() : "");
 
   protected getPersistent = (domain?: Domain): IPersistent => {
-    const str = this.ls.getItem(this.variableName(domain));
+    const str = this.ls.getItem(this.itemName(domain));
     return str ? JSON.parse(str) : {};
   };
 
   protected setPersistent = (object: IPersistent, domain?: Domain): void => {
-    this.ls.setItem(this.variableName(domain), JSON.stringify(object));
+    this.ls.setItem(this.itemName(domain), JSON.stringify(object));
   };
 
   /**

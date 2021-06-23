@@ -6,12 +6,12 @@ const ls = new LocalStorage("./src/__tests__/variables/");
 const group1 = new Group("name1", ls);
 const group2 = new Group("name2", ls);
 
-ls.setItem(group1.variableName, "");
-ls.removeItem(group2.variableName);
+ls.setItem(group1.itemName, "");
+ls.removeItem(group2.itemName);
 
 test("test variable name", () => {
-  expect(group1.variableName).toEqual("GROUP_name1");
-  expect(group2.variableName).toEqual("GROUP_name2");
+  expect(group1.itemName).toEqual("GROUP_name1");
+  expect(group2.itemName).toEqual("GROUP_name2");
 });
 
 test("add users to groups (string)", () => {

@@ -7,7 +7,7 @@ import { Logger } from "log4js";
 import { Group } from "./Group";
 export { Group } from "./Group";
 import { BooleanVariable, Variable } from "./Variable";
-export { Variable } from "./Variable";
+export { BooleanVariable, Variable } from "./Variable";
 
 /**
  * @todo
