@@ -276,7 +276,7 @@ export class TGBotWrapper {
     this.bot.on("message", msg => {
       if (msg.from && this.sudoGroup.isMember(msg.from.id)) {
         if (this.sudoLogVar.get()) {
-          this.botLogger.info(msg);
+          this.botLogger?.info(msg);
         }
 
         if (this.sudoEchoVar.get()) {
@@ -367,7 +367,7 @@ export class TGBotWrapper {
    * @param c Command in question.
    * @param botName Name of the TelegramBot.
    */
-  public commandRegExp = (c: IBotHelperCommand, botName: string): RegExp => {
+  public commandRegExp = (c: IBotHelperCommand, botName: string = ""): RegExp => {
     return c.matchBeginningOnly
       ? new RegExp(`^/${c.command}[a-zA-Z0-9_]*(?:$|@${botName}\\b|[^a-zA-Z0-9_@])`)
       : new RegExp(`^/${c.command}(?:$|@${botName}\\b|[^a-zA-Z0-9_@])`);
@@ -890,10 +890,10 @@ export class TGBotWrapper {
    * @param alertGroup The group to alert.
    * @param alertMessage The alert message. Using "$CHATID" and "$INFO" in the alert message will replace those tags with the chat ID and info about the user respectively.
    */
-  public defaultCommandStart = (response: string, addToGroup: Group, alertGroup?: Group, alertMessage?: string) => {
+  public defaultCommandStart = (response: string, addToGroup?: Group, alertGroup?: Group, alertMessage?: string) => {
     return (msg: TelegramBot.Message) => {
       this.sendTo(msg.chat.id, response, "HTML");
-      if (addToGroup.add(msg.chat.id) && alertGroup) {
+      if (addToGroup && addToGroup.add(msg.chat.id) && alertGroup) {
         const message = alertMessage ? alertMessage : `<b>Chat $CHATID has used the start command!</b>\n$INFO`;
 
         this.sendToGroup(
