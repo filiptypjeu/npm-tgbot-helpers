@@ -76,6 +76,15 @@ export interface IBotHelperCommand {
   callback: (msg: Message) => void;
 }
 
+export interface IMessageInfo {
+  command?: string;
+  commandBase?: string;
+  commandSuffix?: string;
+  commandBotName?: string;
+  text?: string;
+  arguments: string[];
+}
+
 type Command = string;
 export type ChatID = string | number;
 
@@ -410,16 +419,47 @@ export class TGBotWrapper {
     return msg.text!.slice(1, msg.entities[0].length).split("@")[0];
   };
 
-  public getArguments = (text?: string): string[] => {
-    if (text) {
-      return text
-        .split("\n")
-        .join(" ")
-        .split(" ")
-        .filter(s => s)
-        .slice(1);
+  public handleMessage = (msg: TelegramBot.Message): IMessageInfo => {
+    let commandLength = 0;
+    if (msg.entities) {
+      const entity = msg.entities[0];
+      if (entity && entity.type === "bot_command" && entity.offset === 0) {
+        commandLength = entity.length;
+      }
     }
-    return [];
+
+
+    const info: IMessageInfo = {
+      arguments: [],
+    };
+
+    if (!msg.text) {
+      return info;
+    }
+
+    const command = msg.text.substr(0, commandLength).trim();
+    if (command) {
+      info.command = command;
+      info.commandBase = command.split("_")[0].slice(1);
+      info.arguments = msg.text.slice(commandLength).split("\n")[0].split(" ").filter(s => s);
+
+      const suffix = command.split("_")[1]?.split("@")[0];
+      if (suffix) {
+        info.commandSuffix = suffix;
+      }
+
+      const botname = command.split("@")[1];
+      if (botname) {
+        info.commandBotName = botname;
+      }
+    }
+
+    const text = msg.text.slice(commandLength).trim();
+    if (text) {
+      info.text = text;
+    }
+
+    return info;
   };
 
   public groupToUserInfo = async (group: Group, extraInfo?: string[]) => {
@@ -440,34 +480,13 @@ export class TGBotWrapper {
     }
   };
 
-  public commandFriendlyUserId = (userId: ChatID, minusSubstitute: string = "m"): string => {
-    return userId.toString().replace("-", minusSubstitute);
+  public commandify = (userId: ChatID): string => {
+    return userId.toString().replace("-", "m");
   };
 
-  /**
-   * Returns the user/chat ID inside commands that have a user/chat ID appended to them, for example "/command_1234567890" or "/command_1234567890@MyBot".
-   *
-   * @param command The full command.
-   * @param splitAt The character that separates the command and ID.
-   * @param minusSubstitute If the ID is of a group chat, which have negative chat IDs, the minus symbol need to be removed because Telegram commands can not have hyphens in them. Default substitue is "m" as in minus.
-   */
-  public userIdFromCommand = (msg: TelegramBot.Message, splitAt: string = "_", minusSubstitute: string = "m"): ChatID | undefined => {
-    let arg = this.getCommand(msg).split(splitAt)[1];
-    if (!arg) {
-      return undefined;
-    }
-
-    if (arg[0] === minusSubstitute) {
-      arg = "-" + arg.slice(1);
-    }
-
-    const userId = Number(arg);
-
-    if (Number.isSafeInteger(userId)) {
-      return userId;
-    }
-
-    return undefined;
+  public decommandify = (userId?: string): ChatID | undefined => {
+    const n = Number(userId?.replace("m", "-"));
+    return Number.isSafeInteger(n) ? n : undefined
   };
 
   public longNameFromUser = (user: TelegramBot.User | TelegramBot.Chat): string => {
@@ -686,7 +705,7 @@ export class TGBotWrapper {
 
   public defaultCommandVar = () => {
     return async (msg: TelegramBot.Message) => {
-      const args = this.getArguments(msg.text);
+      const args = this.handleMessage(msg).arguments;
 
       if (!args[0]) {
         return this.sendTo(
@@ -726,7 +745,7 @@ export class TGBotWrapper {
         return;
       }
 
-      const chatId = this.userIdFromCommand(msg);
+      const chatId = this.decommandify(this.handleMessage(msg).commandSuffix);
       if (!chatId) {
         this.sendTo(msg.chat.id, `No chat ID found within the command...`);
         return;
@@ -757,14 +776,16 @@ export class TGBotWrapper {
   public defaultCommandSendToGroup = (
     groupName: Group,
     emptyResponse: string,
+    successResponse: string,
     messageFormatter: (messageToFormat: TelegramBot.Message) => string
   ) => {
     return (msg: TelegramBot.Message) => {
-      if (this.getArguments(msg.text)[0] === undefined && emptyResponse) {
-        this.sendTo(msg.chat.id, emptyResponse, "HTML");
+      const text = messageFormatter(msg).trim();
+      if (!text) {
+        if (emptyResponse) this.sendTo(msg.chat.id, emptyResponse, "HTML");
       } else {
-        this.sendToGroup(groupName, messageFormatter(msg), "HTML");
-        this.sendTo(msg.chat.id, "Message sent!");
+        this.sendToGroup(groupName, text, "HTML");
+        this.sendTo(msg.chat.id, successResponse || "Message sent!");
       }
     };
   };
@@ -777,8 +798,9 @@ export class TGBotWrapper {
    */
   public defaultCommandLog = (logPath: string, keys?: string) => {
     return async (msg: TelegramBot.Message) => {
+      const n = Number(this.handleMessage(msg).arguments[0]);
       return readLastLines
-        .read(logPath, Number(this.getArguments(msg.text)[0]) < 50 ? Number(this.getArguments(msg.text)[0]) : 50)
+        .read(logPath, n < 50 ? n : 50)
         .then(s => this.sendTo(msg.chat.id, s ? (keys ? `<b>${keys}</b>\n${s}` : s) : `File ${logPath} is empty.`, "HTML"))
         .catch(e => this.sendError(e));
     };
@@ -803,7 +825,7 @@ export class TGBotWrapper {
   };
 
   public defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
-    const arg = this.getArguments(msg.text)[0];
+    const arg = this.handleMessage(msg).arguments[0];
     const deactivated = this.deactivatedCommands.members;
     let s = "";
 
@@ -844,7 +866,7 @@ export class TGBotWrapper {
         `<b>Request for group <i>${requestFor}</i>:</b>\n - ` +
           this.msgInfoToString(msg).join("\n - ") +
           `\n - Is in group: ${requestFor.isMember(msg.chat.id)}\n` +
-          `/${toggleCommand}_${this.commandFriendlyUserId(msg.chat.id)}`,
+          `/${toggleCommand}_${this.commandify(msg.chat.id)}`,
         "HTML"
       );
     };
@@ -860,7 +882,7 @@ export class TGBotWrapper {
    */
   public defaultCommandToggle = (requestFor: Group, responseToNewMember?: string) => {
     return (msg: TelegramBot.Message) => {
-      const userId = this.userIdFromCommand(msg);
+      const userId = this.decommandify(this.handleMessage(msg).commandSuffix);
       if (!userId) {
         this.sendTo(
           msg.chat.id,
@@ -915,7 +937,7 @@ export class TGBotWrapper {
 
   public defaultCommandGroups = () => {
     return (msg: TelegramBot.Message) => {
-      const n = Number(this.getArguments(msg.text)[0]);
+      const n = Number(this.handleMessage(msg).arguments[0]);
 
       if (n >= 0 && n < this.groups.length) {
         const group = this.groups[n];

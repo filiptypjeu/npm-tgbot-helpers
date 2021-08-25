@@ -65,62 +65,58 @@ test("username", async () => {
   expect((await wrapper.thisUser).username).toEqual("botname");
 });
 
-test("getArguments", () => {
-  expect(wrapper.getArguments("/test a b c")).toEqual(["a", "b", "c"]);
-  expect(wrapper.getArguments("test a b c")).toEqual(["a", "b", "c"]);
-  expect(wrapper.getArguments("/test\na     b   \n\n   \n c   \n  ")).toEqual(["a", "b", "c"]);
-});
-
-test("userIdFromCommand and getCommand", () => {
+test("handleMessage", () => {
   const msg = { text: "/command_12345", entities: [{ type: "bot_command", offset: 0, length: 14 }] } as TelegramBot.Message;
 
-  expect(wrapper.userIdFromCommand(msg)).toEqual(12345);
+  expect(wrapper.handleMessage(msg)).toEqual({
+    command: "/command_12345",
+    commandBase: "command",
+    commandSuffix: "12345",
+    arguments: [],
+  });
 
   msg.text = "/command_12345 more text";
   msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(wrapper.userIdFromCommand(msg)).toEqual(12345);
+  expect(wrapper.handleMessage(msg)).toEqual({
+    command: "/command_12345",
+    commandBase: "command",
+    commandSuffix: "12345",
+    text: "more text",
+    arguments: ["more", "text"],
+  });
 
-  msg.text = "/command_12345@bot some text";
+  msg.text = "/command_SOMETHING12345@bot some text   with     sp\naces";
   msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(wrapper.userIdFromCommand(msg)).toEqual(12345);
+  expect(wrapper.handleMessage(msg)).toEqual({
+    command: "/command_SOMETHING12345@bot",
+    commandBase: "command",
+    commandSuffix: "SOMETHING12345",
+    commandBotName: "bot",
+    text: "some text   with     sp\naces",
+    arguments: ["some", "text", "with", "sp"],
+  });
 
-  msg.text = "/command_m12345@bot some text";
-  msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(wrapper.userIdFromCommand(msg)).toEqual(-12345);
-
-  msg.text = "/command_12345";
-  msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(wrapper.userIdFromCommand(msg, "3", "4")).toEqual(-5);
-
-  msg.text = "/commandAB12345@bot some text";
-  msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(wrapper.userIdFromCommand(msg, "A", "B")).toEqual(-12345);
-
-  msg.text = "/commandA12345@bot some text";
-  msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(wrapper.userIdFromCommand(msg)).toEqual(undefined);
-
-  msg.text = "/command_abc";
-  msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(wrapper.userIdFromCommand(msg)).toEqual(undefined);
-
-  msg.text = "/command_12.345";
-  msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  expect(wrapper.userIdFromCommand(msg)).toEqual(undefined);
-
-  msg.text = "/command_12345";
-  msg.entities![0]!.length = msg.text.split(" ")[0].length;
-  msg.entities![0]!.offset = 1;
-  expect(wrapper.userIdFromCommand(msg)).toEqual(undefined);
+  msg.entities = undefined;
+  expect(wrapper.handleMessage(msg)).toEqual({
+    text: "/command_SOMETHING12345@bot some text   with     sp\naces",
+    arguments: [],
+  });
 });
 
-test("commandFriendlyUserId", () => {
-  expect(wrapper.commandFriendlyUserId(12345)).toEqual("12345");
-  expect(wrapper.commandFriendlyUserId("12345")).toEqual("12345");
-  expect(wrapper.commandFriendlyUserId(-12345)).toEqual("m12345");
-  expect(wrapper.commandFriendlyUserId("-12345")).toEqual("m12345");
-  expect(wrapper.commandFriendlyUserId(-12345, "MINUS")).toEqual("MINUS12345");
-  expect(wrapper.commandFriendlyUserId("-12345", "MINUS")).toEqual("MINUS12345");
+test("commandify", () => {
+  expect(wrapper.commandify(12345)).toEqual("12345");
+  expect(wrapper.commandify("12345")).toEqual("12345");
+  expect(wrapper.commandify(-12345)).toEqual("m12345");
+  expect(wrapper.commandify("-12345")).toEqual("m12345");
+});
+
+test("decommandify", () => {
+  expect(wrapper.decommandify("12345")).toEqual(12345);
+  expect(wrapper.decommandify("-12345")).toEqual(-12345);
+  expect(wrapper.decommandify("m12345")).toEqual(-12345);
+  expect(wrapper.decommandify("12.5")).toEqual(undefined);
+  expect(wrapper.decommandify("123m45")).toEqual(undefined);
+  expect(wrapper.decommandify("n12345")).toEqual(undefined);
 });
 
 test("sendTo", () => {
