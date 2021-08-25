@@ -714,14 +714,13 @@ export class TGBotWrapper {
   };
 
   /**
-   * Creates a callback method for a command that sends a message to a specific chat. The command is expected to be used like "/command_CHATID <message>". The received message will look like "<header>\n<message>\n<footer>".
+   * Creates a callback method for a command that sends a message to a specific chat. The command is expected to be used like "/command_<CHATID> <MESSAGE>". The received message can be formatted freely.
    *
-   * @param header The header to use.
-   * @param footer The footer to use.
+   * @param messageFormatter Function that formats the message to be sent. Can be used to for example add a header or footer to the message.
    */
-  public defaultCommandSendTo = (header?: string, footer?: string) => {
+  public defaultCommandSendTo = (messageFormatter?: (messageToFormat: TelegramBot.Message) => string) => {
     return (msg: TelegramBot.Message) => {
-      const text = msg.text!.split(" ").slice(1).join(" ").trim();
+      const text = messageFormatter ? messageFormatter(msg).trim() : msg.text!.split(" ").slice(1).join(" ").trim();
       if (!text) {
         this.sendTo(msg.chat.id, `No text provided...`);
         return;
@@ -729,7 +728,7 @@ export class TGBotWrapper {
 
       const chatId = this.userIdFromCommand(msg);
       if (!chatId) {
-        this.sendTo(msg.chat.id, `No chat ID found...`);
+        this.sendTo(msg.chat.id, `No chat ID found within the command...`);
         return;
       }
 
@@ -737,7 +736,7 @@ export class TGBotWrapper {
         .getChat(chatId)
         .then(chat => {
           this.sendTo(msg.chat.id, `Message sent to chat ${chatId}!`);
-          this.sendTo(chat.id, `${header || ""}\n${text}\n${footer || ""}`.trim(), "HTML");
+          this.sendTo(chat.id, text, "HTML");
         })
         .catch(() => {
           this.sendTo(msg.chat.id, `No chat with ID ${chatId} is available to the bot...`);
