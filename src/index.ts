@@ -932,7 +932,7 @@ export class TGBotWrapper {
         this.sendTo(
           msg.chat.id,
           this.groups.length > 0
-            ? `<b>Available groups</b>:\n${this.groups.map((g, i) => `${i} ${g}`).join("\n")}`
+            ? `<b>Available groups</b>:\n${this.groups.map((g, i) => `${i} ${g} (${g.members.length})`).join("\n")}`
             : "No groups available...",
           "HTML"
         );
