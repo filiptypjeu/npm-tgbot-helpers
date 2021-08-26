@@ -454,22 +454,12 @@ export class TGBotWrapper {
     return info;
   };
 
-  public groupToUserInfo = async (group: Group, extraInfo?: string[]) => {
-    const userIds = group.members;
-
-    if (userIds.length > 0) {
-      return await Promise.all(
-        userIds.map(async (n, i) => {
-          return await this.bot.getChat(n).then(chat => {
-            return `${chat.first_name} ${chat.last_name}, ${chat.username} (ID: ${n}${
-              extraInfo ? `, ${extraInfo[i] ? extraInfo[i] : "no info"}` : ""
-            })`;
-          });
-        })
-      );
-    } else {
-      return [];
-    }
+  public groupToUserInfo = async (group: Group) => {
+    return await Promise.all(
+      group.members.map(async n => {
+        return await this.bot.getChat(n).then(chat => this.chatInfo(chat, true, true));
+      })
+    );
   };
 
   public commandify = (userId: ChatID): string => {
@@ -644,7 +634,7 @@ export class TGBotWrapper {
    */
   public defaultCommandIP = async (msg: TelegramBot.Message) => {
     const ifaces = os.networkInterfaces();
-    let ips = "";
+    const ips: string[] = [];
 
     Object.keys(ifaces).forEach(ifname => {
       let alias = 0;
@@ -654,13 +644,13 @@ export class TGBotWrapper {
           return;
         }
 
-        alias ? (ips += `${ifname}:${alias} ${iface.address}\n`) : (ips += `${ifname} ${iface.address}\n`);
+        ips.push(`${ifname}${alias ? ":" + alias : ""} ${iface.address}`);
 
         ++alias;
       });
     });
 
-    return this.sendTo(msg.chat.id, ips ? ips : "No IP addresses found.");
+    return this.sendTo(msg.chat.id, ips.length ? ips.join("\n") : "No IP addresses found.");
   };
 
   public defaultCommandCommands = (msg: TelegramBot.Message) => {
@@ -700,8 +690,10 @@ export class TGBotWrapper {
 
   public defaultCommandVar = () => {
     return async (msg: TelegramBot.Message) => {
-      const args = this.handleMessage(msg).arguments;
+      const info = this.handleMessage(msg);
+      const args = info.arguments;
 
+      // Give all variables
       if (!args[0]) {
         return this.sendTo(
           msg.chat.id,
@@ -710,20 +702,27 @@ export class TGBotWrapper {
             "</code>",
           "HTML"
         );
-      } else if (!args[1]) {
-        return this.sendTo(msg.chat.id, "Please provide two arguments.");
-      } else if (Number(args[0]) >= 0 && Number(args[0]) < this.variables.length) {
-        const v = this.variables[Number(args[0])];
-        const value = args.slice(1).join(" ").trim();
+      }
+
+      // Handle invalid variable number
+      const n = Number(args[0]);
+      const v = this.variables[n];
+      if (!v) {
+        return this.sendTo(msg.chat.id, `Variable ${args[0]} does not exist.`);
+      }
+
+      // Set variable
+      if (args[1]) {
+        const value = info.text!;
         try {
           v.set(value);
-          return this.sendTo(msg.chat.id, `Variable set: <code>${v.name}: ${v.type} = ${JSON.stringify(v.get())}</code>`, "HTML");
         } catch (e) {
           return this.sendTo(msg.chat.id, `Could not set value JSON.parse(${value})`, "HTML");
         }
-      } else {
-        return this.sendTo(msg.chat.id, `Variable ${args[0]} does not exist.`);
       }
+
+      // Get variable
+      return this.sendTo(msg.chat.id, `Variable ${n}: <code>${v.name}: ${v.type} = ${JSON.stringify(v.get())}</code>`, "HTML");
     };
   };
 
@@ -822,25 +821,27 @@ export class TGBotWrapper {
   public defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
     const arg = this.handleMessage(msg).arguments[0];
     const deactivated = this.deactivatedCommands.members;
-    let s = "";
 
+    // Give all deactivated commands
     if (!arg) {
-      s = `Use /${this.getCommand(msg)} /&lt;command&gt; to deactivate/activate command.\n\n${
+      return this.sendTo(msg.chat.id, `Use /${this.getCommand(msg)} /&lt;command&gt; to deactivate/activate command.\n\n${
         deactivated.length === 0
           ? "No deactivated commands found."
           : `<b>Deactivated commands:</b>\n${deactivated.map((v, i) => `${i} ${v}`).join("\n")}`
-      }`;
-    } else if (Number(arg) < deactivated.length) {
-      this.deactivatedCommands.toggle(deactivated[Number(arg)]);
-      s = `Command ${deactivated[Number(arg)]} has been reactivated!`;
-    } else if (arg.indexOf("/") !== 0) {
-      s = `Number not correct, or command not starting with '/'.`;
-    } else {
-      this.deactivatedCommands.toggle(arg);
-      s = `Command ${arg} has been deactivated!`;
+      }`, "HTML");
     }
 
-    return this.sendTo(msg.chat.id, s, "HTML");
+    const c = deactivated[Number(arg)];
+    if (c) {
+      this.deactivatedCommands.toggle(c);
+      return this.sendTo(msg.chat.id, `Command ${c} has been reactivated!`);
+    }
+
+    if (arg.startsWith("/")) {
+      return this.sendTo(msg.chat.id, `Command ${arg} has been ${this.deactivatedCommands.toggle(arg) ? "deactivated" : "reactivated"}!`);
+    }
+
+    this.sendTo(msg.chat.id, `Number not correct, or command not starting with '/'.`);
   };
 
   /**
@@ -878,11 +879,12 @@ export class TGBotWrapper {
    */
   public defaultCommandToggle = (requestFor: Group, responseToNewMember?: string) => {
     return (msg: TelegramBot.Message) => {
-      const userId = this.decommandify(this.handleMessage(msg).commandSuffix);
+      const info = this.handleMessage(msg);
+      const userId = this.decommandify(info.commandSuffix);
       if (!userId) {
         this.sendTo(
           msg.chat.id,
-          `Use ${msg.text!.split(" ")[0].split("_")[0]}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`,
+          `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`,
           "HTML"
         );
         return;
@@ -925,10 +927,9 @@ export class TGBotWrapper {
 
   public defaultCommandGroups = () => {
     return (msg: TelegramBot.Message) => {
-      const n = Number(this.handleMessage(msg).arguments[0]);
+      const group = this.groups[Number(this.handleMessage(msg).arguments[0])];
 
-      if (n >= 0 && n < this.groups.length) {
-        const group = this.groups[n];
+      if (group) {
         this.groupToUserInfo(group)
           .then(a => {
             const message =
