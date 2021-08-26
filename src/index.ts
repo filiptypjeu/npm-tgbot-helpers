@@ -9,7 +9,7 @@ import momentDurationFormatSetup from "moment-duration-format";
 import { Group } from "./Group";
 export { Group } from "./Group";
 import { BooleanVariable, Variable } from "./Variable";
-export { BooleanVariable, Variable } from "./Variable";
+export { BooleanVariable, StringVariable, Variable } from "./Variable";
 momentDurationFormatSetup(moment as any);
 
 /**
