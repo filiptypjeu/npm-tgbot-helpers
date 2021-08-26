@@ -15,7 +15,7 @@ momentDurationFormatSetup(moment as any);
 /**
  * @todo
  * - Command allowed for multiple groups
- * - Better info about a user, and a separate command
+ * - Add command for getting user info: name, id, groups etc.
  * - Add default log command
  */
 
@@ -746,28 +746,35 @@ export class TGBotWrapper {
    *
    * @param messageFormatter Function that formats the message to be sent. Can be used to for example add a header or footer to the message.
    */
-  public defaultCommandSendTo = (messageFormatter?: (messageToFormat: TelegramBot.Message) => string) => {
+  public defaultCommandSendTo = (
+    messageFormatter: (messageToFormat: TelegramBot.Message) => string,
+    emptyResponse?: string,
+    successResponse?: string,
+    noIdResponse?: string,
+    noChatResponse?: string
+  ) => {
     return (msg: TelegramBot.Message) => {
-      const text = messageFormatter ? messageFormatter(msg).trim() : msg.text!.split(" ").slice(1).join(" ").trim();
-      if (!text) {
-        this.sendTo(msg.chat.id, `No text provided...`);
-        return;
+      const info = this.handleMessage(msg);
+
+      // No text provided
+      if (!info.text) {
+        return this.sendTo(msg.chat.id, emptyResponse || "No text provided...");
       }
 
-      const chatId = this.decommandify(this.handleMessage(msg).commandSuffix);
+      // No chat id provided
+      const chatId = this.decommandify(info.commandSuffix);
       if (!chatId) {
-        this.sendTo(msg.chat.id, `No chat ID found within the command...`);
-        return;
+        return this.sendTo(msg.chat.id, noIdResponse || `No chat ID found within the command...`);
       }
 
       this.bot
         .getChat(chatId)
         .then(chat => {
-          this.sendTo(msg.chat.id, `Message sent to chat ${chatId}!`);
-          this.sendTo(chat.id, text, "HTML");
+          this.sendTo(msg.chat.id, successResponse || `Message sent to chat ${chatId}!`);
+          this.sendTo(chat.id, messageFormatter(msg) || info.text!, "HTML");
         })
         .catch(() => {
-          this.sendTo(msg.chat.id, `No chat with ID ${chatId} is available to the bot...`);
+          this.sendTo(msg.chat.id, noChatResponse || `No chat with ID ${chatId} is available to the bot...`);
           return;
         });
 
@@ -783,18 +790,18 @@ export class TGBotWrapper {
    * @param messageFormatter Function that formats the message to be sent. Can be used to for example add a header or footer to the message.
    */
   public defaultCommandSendToGroup = (
-    groupName: Group,
-    emptyResponse: string,
-    successResponse: string,
-    messageFormatter: (messageToFormat: TelegramBot.Message) => string
+    group: Group,
+    messageFormatter: (messageToFormat: TelegramBot.Message) => string,
+    emptyResponse?: string,
+    successResponse?: string,
   ) => {
     return (msg: TelegramBot.Message) => {
-      const text = messageFormatter(msg).trim();
+      const text = this.handleMessage(msg).text;
       if (!text) {
         if (emptyResponse) this.sendTo(msg.chat.id, emptyResponse, "HTML");
       } else {
-        this.sendToGroup(groupName, text, "HTML");
-        this.sendTo(msg.chat.id, successResponse || "Message sent!");
+        this.sendToGroup(group, messageFormatter(msg) || text, "HTML");
+        this.sendTo(msg.chat.id, successResponse || `Message sent to group <i>${group.name}</i>!`, "HTML");
       }
     };
   };
