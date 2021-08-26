@@ -628,12 +628,12 @@ export class TGBotWrapper {
    * Callback method for a command that respons with the current uptime of the bot and OS.
    */
   public defaultCommandUptime = (msg: TelegramBot.Message) => {
-    const f = "d [days], h [hours], m [minutes] and s [seconds]";
-    this.sendTo(msg.chat.id, `Bot uptime: ${
+    const f = "d [days], h [hours], m [minutes and] s [seconds]";
+    this.sendTo(msg.chat.id, `<b>Bot uptime</b>: <i>${
       moment.duration(Date.now() - this.startTime.valueOf()).format(f)
-    }\nOS uptime: ${
+    }</i>\n<b>OS uptime</b>: <i>${
       moment.duration(os.uptime() * 1000).format(f)
-    }`);
+    }</i>`, "HTML");
   };
 
   /**
@@ -831,7 +831,7 @@ export class TGBotWrapper {
 
     // Give all deactivated commands
     if (!arg) {
-      return this.sendTo(msg.chat.id, `Use /${this.getCommand(msg)} /&lt;command&gt; to deactivate/activate command.\n\n${
+      return this.sendTo(msg.chat.id, `Use "/${this.getCommand(msg)} &lt;command&gt;" to deactivate/activate certain commands.\n\n${
         deactivated.length === 0
           ? "No deactivated commands found."
           : `<b>Deactivated commands:</b>\n${deactivated.map((v, i) => `${i} ${v}`).join("\n")}`
@@ -950,7 +950,7 @@ export class TGBotWrapper {
         this.sendTo(
           msg.chat.id,
           this.groups.length > 0
-            ? `<b>Available groups</b>:\n${this.groups.map((g, i) => `${i} ${g} (${g.members.length})`).join("\n")}`
+            ? `<b>Available groups</b>:\n${this.groups.map((g, i) => `${i} <i>${g}</i> (${g.members.length})`).join("\n")}`
             : "No groups available...",
           "HTML"
         );
