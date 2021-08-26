@@ -4,10 +4,13 @@ import os from "os";
 import readLastLines from "read-last-lines";
 import sanitizeHtml from "sanitize-html";
 import { Logger } from "log4js";
+import moment from "moment";
+import momentDurationFormatSetup from "moment-duration-format";
 import { Group } from "./Group";
 export { Group } from "./Group";
 import { BooleanVariable, Variable } from "./Variable";
 export { BooleanVariable, Variable } from "./Variable";
+momentDurationFormatSetup(moment as any);
 
 /**
  * @todo
@@ -616,32 +619,15 @@ export class TGBotWrapper {
   };
 
   /**
-   * @param {number | Date} value is the value based on which the duration should be calculated on. Can either be the number of milliseconds of the duration, or a Date object that specifies the start time.
-   *
-   * @returns {string} the duration in a 'days hours minutes seconds' format.
-   */
-  public getDurationString = (value: number | Date): string => {
-    let v: number;
-    if (typeof value === "number") {
-      v = value;
-    } else {
-      v = new Date().valueOf() - value.valueOf();
-    }
-    const d = Math.floor(v / (3600000 * 24));
-    const h = Math.floor((v - d * 3600000 * 24) / 3600000);
-    const m = Math.floor((v - d * 3600000 * 24 - h * 3600000) / 60000);
-    const s = Math.floor((v - d * 3600000 * 24 - h * 3600000 - m * 60000) / 1000);
-
-    return `${d} day${d === 1 ? "" : "s"} ${h} hour${h === 1 ? "" : "s"} ${m} minute${m === 1 ? "" : "s"} ${s} second${s === 1 ? "" : "s"}`;
-  };
-
-  /**
    * Callback method for a command that respons with the current uptime of the bot and OS.
    */
-  public defaultCommandUptime = async (msg: TelegramBot.Message) => {
-    return Promise.all([this.getDurationString(this.startTime), this.getDurationString(os.uptime() * 1000)]).then(([s1, s2]) =>
-      this.sendTo(msg.chat.id, `Bot uptime: ${s1}\nOS uptime: ${s2}`)
-    );
+  public defaultCommandUptime = (msg: TelegramBot.Message) => {
+    const f = "d [days], h [hours], m [minutes] and s [seconds]";
+    this.sendTo(msg.chat.id, `Bot uptime: ${
+      moment.duration(Date.now() - this.startTime.valueOf()).format(f)
+    }\nOS uptime: ${
+      moment.duration(os.uptime() * 1000).format(f)
+    }`);
   };
 
   /**
