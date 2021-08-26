@@ -206,40 +206,42 @@ test("groupToUserInfo", () => {
   expect(wrapper.bot.getChat).toHaveBeenCalledTimes(2);
 });
 
-test("longNameFromUser with username", () => {
-  const u = {
-    username: "USERNAME",
-  } as TelegramBot.User;
-
-  expect(wrapper.longNameFromUser(u)).toEqual("@USERNAME");
-
-  u.first_name = "FIRSTNAME";
-  expect(wrapper.longNameFromUser(u)).toEqual("FIRSTNAME @USERNAME");
-
-  u.last_name = "LASTNAME";
-  expect(wrapper.longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME @USERNAME");
-});
-
-test("longNameFromUser no username", () => {
+test("chatInfo with user", () => {
   const u = {
     first_name: "FIRSTNAME",
+    is_bot: false,
+    id: 1234,
   } as TelegramBot.User;
 
-  expect(wrapper.longNameFromUser(u)).toEqual("FIRSTNAME");
+  expect(wrapper.chatInfo(u)).toEqual("FIRSTNAME");
+  expect(wrapper.chatInfo(u, true, true)).toEqual("<b>FIRSTNAME</b>");
+
+  u.username = "USERNAME",
+  expect(wrapper.chatInfo(u)).toEqual("FIRSTNAME @USERNAME");
+  expect(wrapper.chatInfo(u, true, true)).toEqual("<b>FIRSTNAME</b> <i>@USERNAME</i>");
 
   u.last_name = "LASTNAME";
-  expect(wrapper.longNameFromUser(u)).toEqual("FIRSTNAME LASTNAME");
+  u.is_bot = true;
+  expect(wrapper.chatInfo(u)).toEqual("FIRSTNAME LASTNAME @USERNAME");
+  expect(wrapper.chatInfo(u, true, true)).toEqual("<b>FIRSTNAME LASTNAME</b> <i>@USERNAME</i> (BOT)");
 });
 
-test("longNameFromUser with title", () => {
-  const u = {
+test("chatInfo with chat", () => {
+  const c = {
+    id: 4321,
     title: "TITLE",
     first_name: "FIRSTNAME",
     last_name: "LASTNAME",
     username: "USERNAME",
+    type: "supergroup",
   } as TelegramBot.Chat;
 
-  expect(wrapper.longNameFromUser(u)).toEqual("TITLE");
+  expect(wrapper.chatInfo(c)).toEqual("TITLE [supergroup]");
+  expect(wrapper.chatInfo(c, true, true)).toEqual("<b>TITLE</b> [supergroup]");
+
+  c.invite_link = "LINK";
+  expect(wrapper.chatInfo(c)).toEqual("TITLE [supergroup]");
+  expect(wrapper.chatInfo(c, true, true)).toEqual("<b>TITLE</b> [supergroup] (<i>LINK</i>)");
 });
 
 test("regexp", () => {

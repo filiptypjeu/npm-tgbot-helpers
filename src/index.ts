@@ -332,7 +332,7 @@ export class TGBotWrapper {
     }
 
     // Log the command
-    this.commandLogger?.info(`${this.longNameFromUser(msg.from!)} : /${c.command} [${log}]`);
+    this.commandLogger?.info(`${this.chatInfo(msg.from!)} : /${c.command} [${log}]`);
 
     return log === "ok";
   };
@@ -401,17 +401,6 @@ export class TGBotWrapper {
     });
 
     return m;
-  };
-
-  public msgInfoToString = (msg: TelegramBot.Message): string[] => {
-    return [
-      `Username: ${msg.from!.username}`,
-      `First name: ${msg.from!.first_name}`,
-      `Last name: ${msg.from!.last_name}`,
-      `Is bot: ${msg.from!.is_bot}`,
-      `User ID: ${msg.from!.id}`,
-      `Chat type: ${msg.chat.type}`,
-    ];
   };
 
   public getCommand = (msg: TelegramBot.Message): Command => {
@@ -492,13 +481,33 @@ export class TGBotWrapper {
     return Number.isSafeInteger(n) ? n : undefined
   };
 
-  public longNameFromUser = (user: TelegramBot.User | TelegramBot.Chat): string => {
-    const title = (user as TelegramBot.Chat).title;
-    if (title) {
-      return title;
-    }
+  public chatInfo = (userOrChat: TelegramBot.User | TelegramBot.Chat, long: boolean = false, tags: boolean = false): string => {
+    const a: Array<string | undefined> = [];
 
-    const a: string[] = [user.first_name || "", user.last_name || "", user.username ? "@" + user.username : ""];
+    const i = tags ? "<i>" : "";
+    const ii = tags ? "</i>" : "";
+    const b = tags ? "<b>" : "";
+    const bb = tags ? "</b>" : "";
+
+    // Chat
+    if ((userOrChat as any).title) {
+      const c = userOrChat as TelegramBot.Chat;
+      a.push(`${b}${c.title}${bb}`);
+      a.push(`[${c.type}]`);
+      if (long) {
+        a.push(c.invite_link ? `(${i}${c.invite_link}${ii})` : "");
+      }
+
+    // User
+    } else {
+      const u = userOrChat as TelegramBot.User;
+      a.push(`${b}${u.first_name}${u.last_name ? " " + u.last_name : ""}${bb}`);
+      a.push(u.username ? `${i}@${u.username}${ii}` : "");
+      if (long) {
+        a.push(u.is_bot ? `(BOT)` : "");
+        a.push(u.language_code ? `[${u.language_code}]` : "");
+      }
+    }
 
     return a
       .filter(s => s)
@@ -849,10 +858,11 @@ export class TGBotWrapper {
       }
       this.sendToGroup(
         sendRequestTo,
-        `<b>Request for group <i>${requestFor}</i>:</b>\n - ` +
-          this.msgInfoToString(msg).join("\n - ") +
-          `\n - Is in group: ${requestFor.isMember(msg.chat.id)}\n` +
-          `/${toggleCommand}_${this.commandify(msg.chat.id)}`,
+        `<b>Request for group <i>${requestFor}</i>:</b>\n`
+        + ` - User: ${this.chatInfo(msg.from!, true, true)}\n`
+        + ` - Chat: ${this.chatInfo(msg.chat, true, true)}\n`
+        + ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>\n`
+        + `Toggle: /${toggleCommand}_${this.commandify(msg.chat.id)}`,
         "HTML"
       );
     };
@@ -896,25 +906,17 @@ export class TGBotWrapper {
    * @param response The respone to send to the user.
    * @param addToGroup The group the user should be added to when using the command for the first time.
    * @param alertGroup The group to alert.
-   * @param alertMessage The alert message. Using "$CHATID" and "$INFO" in the alert message will replace those tags with the chat ID and info about the user respectively.
    */
-  public defaultCommandStart = (response: string, addToGroup?: Group, alertGroup?: Group, alertMessage?: string) => {
+  public defaultCommandStart = (response: string, addToGroup?: Group, alertGroup?: Group) => {
     return (msg: TelegramBot.Message) => {
       this.sendTo(msg.chat.id, response, "HTML");
-      if (addToGroup && addToGroup.add(msg.chat.id) && alertGroup) {
-        const message = alertMessage ? alertMessage : `<b>Chat $CHATID has used the start command!</b>\n$INFO`;
 
-        this.sendToGroup(
-          alertGroup,
-          message
-            .split("$CHATID")
-            .join(msg.chat.id.toString())
-            .split("$INFO")
-            .join(
-              this.msgInfoToString(msg)
-                .map(s => " - " + s)
-                .join("\n")
-            ),
+      if (addToGroup && addToGroup.add(msg.chat.id) && alertGroup) {
+        const c = this.handleMessage(msg).commandBase;
+        this.sendToGroup(alertGroup,
+          `<b>A new user have used the /${c} command</b>\n`
+          + ` - User: ${this.chatInfo(msg.from!, true, true)}\n`
+          + ` - Chat: ${this.chatInfo(msg.chat, true, true)}`,
           "HTML"
         );
       }
