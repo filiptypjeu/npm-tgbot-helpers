@@ -718,13 +718,21 @@ export class TGBotWrapper {
         return this.sendTo(msg.chat.id, `Variable ${args[0]} does not exist.`);
       }
 
+      // Reset variable value
+      if (args[1] === "#" || args[1].toLowerCase() === "default") {
+        v.reset();
+
       // Set variable
-      if (args[1]) {
-        const value = info.text!;
-        try {
-          v.set(value);
-        } catch (e) {
-          return this.sendTo(msg.chat.id, `Could not set value JSON.parse(${value})`, "HTML");
+      } else {
+        // The value should be interpreted as everything past the first argument, not only the second argument
+        const value = info.text!.slice(args[0].length).trim();
+
+        if (value) {
+          try {
+            v.set(value);
+          } catch (e) {
+            return this.sendTo(msg.chat.id, `Could not set value JSON.parse(${value})`, "HTML");
+          }
         }
       }
 
