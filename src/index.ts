@@ -420,7 +420,6 @@ export class TGBotWrapper {
       }
     }
 
-
     const info: IMessageInfo = {
       arguments: [],
     };
@@ -433,7 +432,11 @@ export class TGBotWrapper {
     if (command) {
       info.command = command;
       info.commandBase = command.split("_")[0].slice(1);
-      info.arguments = msg.text.slice(commandLength).split("\n")[0].split(" ").filter(s => s);
+      info.arguments = msg.text
+        .slice(commandLength)
+        .split("\n")[0]
+        .split(" ")
+        .filter(s => s);
 
       const suffix = command.split("_")[1]?.split("@")[0];
       if (suffix) {
@@ -468,7 +471,7 @@ export class TGBotWrapper {
 
   public decommandify = (userId?: string): ChatID | undefined => {
     const n = Number(userId?.replace("m", "-"));
-    return Number.isSafeInteger(n) ? n : undefined
+    return Number.isSafeInteger(n) ? n : undefined;
   };
 
   /**
@@ -476,8 +479,13 @@ export class TGBotWrapper {
    * 2. Chat, private => name and username etc.
    * 3. Chat, not private => title and type etc.
    */
-  public chatInfo = (chatOrUser: TelegramBot.Chat | TelegramBot.User, allInfo: boolean = false, tags: boolean = false, noNameIfPrivateChat: boolean = false): string => {
-    const a: Array<string | undefined> = [];
+  public chatInfo = (
+    chatOrUser: TelegramBot.Chat | TelegramBot.User,
+    allInfo: boolean = false,
+    tags: boolean = false,
+    noNameIfPrivateChat: boolean = false
+  ): string => {
+    const a: (string | undefined)[] = [];
 
     const i = tags ? "<i>" : "";
     const ii = tags ? "</i>" : "";
@@ -495,7 +503,7 @@ export class TGBotWrapper {
         a.push(c.invite_link ? `${i}${c.invite_link}${ii}` : "");
       }
 
-    // User or private chat
+      // User or private chat
     } else {
       const u = chatOrUser as TelegramBot.User;
       a.push(`${b}${u.first_name}${u.last_name ? " " + u.last_name : ""}${bb}`);
@@ -629,11 +637,13 @@ export class TGBotWrapper {
    */
   public defaultCommandUptime = (msg: TelegramBot.Message) => {
     const f = "d [days], h [hours], m [minutes and] s [seconds]";
-    this.sendTo(msg.chat.id, `<b>Bot uptime</b>: <i>${
-      moment.duration(Date.now() - this.startTime.valueOf()).format(f)
-    }</i>\n<b>OS uptime</b>: <i>${
-      moment.duration(os.uptime() * 1000).format(f)
-    }</i>`, "HTML");
+    this.sendTo(
+      msg.chat.id,
+      `<b>Bot uptime</b>: <i>${moment.duration(Date.now() - this.startTime.valueOf()).format(f)}</i>\n<b>OS uptime</b>: <i>${moment
+        .duration(os.uptime() * 1000)
+        .format(f)}</i>`,
+      "HTML"
+    );
   };
 
   /**
@@ -705,7 +715,7 @@ export class TGBotWrapper {
         return this.sendTo(
           msg.chat.id,
           "<b>Available variables:</b>\n<code>" +
-            this.variables.map((v, i) => `${i} ${v.name}: ${v.type} = ${JSON.stringify(v.get())}`).join("\n") +
+            this.variables.map((V, i) => `${i} ${V.name}: ${V.type} = ${JSON.stringify(V.get())}`).join("\n") +
             "</code>",
           "HTML"
         );
@@ -722,7 +732,7 @@ export class TGBotWrapper {
       if (args[1] === "#" || args[1].toLowerCase() === "default") {
         v.reset();
 
-      // Set variable
+        // Set variable
       } else {
         // The value should be interpreted as everything past the first argument, not only the second argument
         const value = info.text!.slice(args[0].length).trim();
@@ -793,7 +803,7 @@ export class TGBotWrapper {
     group: Group,
     messageFormatter: (messageToFormat: TelegramBot.Message) => string,
     emptyResponse?: string,
-    successResponse?: string,
+    successResponse?: string
   ) => {
     return (msg: TelegramBot.Message) => {
       const text = this.handleMessage(msg).text;
@@ -846,11 +856,15 @@ export class TGBotWrapper {
 
     // Give all deactivated commands
     if (!arg) {
-      return this.sendTo(msg.chat.id, `Use "/${this.getCommand(msg)} &lt;command&gt;" to deactivate/activate certain commands.\n\n${
-        deactivated.length === 0
-          ? "No deactivated commands found."
-          : `<b>Deactivated commands:</b>\n${deactivated.map((v, i) => `${i} ${v}`).join("\n")}`
-      }`, "HTML");
+      return this.sendTo(
+        msg.chat.id,
+        `Use "/${this.getCommand(msg)} &lt;command&gt;" to deactivate/activate certain commands.\n\n${
+          deactivated.length === 0
+            ? "No deactivated commands found."
+            : `<b>Deactivated commands:</b>\n${deactivated.map((v, i) => `${i} ${v}`).join("\n")}`
+        }`,
+        "HTML"
+      );
     }
 
     const c = deactivated[Number(arg)];
@@ -881,11 +895,11 @@ export class TGBotWrapper {
       }
       this.sendToGroup(
         sendRequestTo,
-        `<b>Request for group <i>${requestFor}</i>:</b>\n`
-        + ` - User: ${this.chatInfo(msg.from!, true, true)}\n`
-        + ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}\n`
-        + ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>\n`
-        + `Toggle: /${toggleCommand}_${this.commandify(msg.chat.id)}`,
+        `<b>Request for group <i>${requestFor}</i>:</b>\n` +
+          ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
+          ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}\n` +
+          ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>\n` +
+          `Toggle: /${toggleCommand}_${this.commandify(msg.chat.id)}`,
         "HTML"
       );
     };
@@ -904,11 +918,7 @@ export class TGBotWrapper {
       const info = this.handleMessage(msg);
       const userId = this.decommandify(info.commandSuffix);
       if (!userId) {
-        this.sendTo(
-          msg.chat.id,
-          `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`,
-          "HTML"
-        );
+        this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`, "HTML");
         return;
       }
 
@@ -937,10 +947,11 @@ export class TGBotWrapper {
 
       if (addToGroup && addToGroup.add(msg.chat.id) && alertGroup) {
         const c = this.handleMessage(msg).commandBase;
-        this.sendToGroup(alertGroup,
-          `<b>A new user have used the /${c} command</b>\n`
-          + ` - User: ${this.chatInfo(msg.from!, true, true)}\n`
-          + ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`,
+        this.sendToGroup(
+          alertGroup,
+          `<b>A new user have used the /${c} command</b>\n` +
+            ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
+            ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`,
           "HTML"
         );
       }

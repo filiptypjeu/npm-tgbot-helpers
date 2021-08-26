@@ -216,7 +216,7 @@ test("chatInfo with user", () => {
   expect(wrapper.chatInfo(u)).toEqual("FIRSTNAME");
   expect(wrapper.chatInfo(u, true, true, true)).toEqual("<b>FIRSTNAME</b>");
 
-  u.username = "USERNAME",
+  u.username = "USERNAME";
   expect(wrapper.chatInfo(u)).toEqual("FIRSTNAME @USERNAME");
   expect(wrapper.chatInfo(u, true, true, true)).toEqual("<b>FIRSTNAME</b> <i>@USERNAME</i>");
 
