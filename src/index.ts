@@ -471,7 +471,12 @@ export class TGBotWrapper {
     return Number.isSafeInteger(n) ? n : undefined
   };
 
-  public chatInfo = (userOrChat: TelegramBot.User | TelegramBot.Chat, long: boolean = false, tags: boolean = false): string => {
+  /**
+   * 1. User => name and username etc.
+   * 2. Chat, private => name and username etc.
+   * 3. Chat, not private => title and type etc.
+   */
+  public chatInfo = (chatOrUser: TelegramBot.Chat | TelegramBot.User, allInfo: boolean = false, tags: boolean = false, noNameIfPrivateChat: boolean = false): string => {
     const a: Array<string | undefined> = [];
 
     const i = tags ? "<i>" : "";
@@ -479,21 +484,23 @@ export class TGBotWrapper {
     const b = tags ? "<b>" : "";
     const bb = tags ? "</b>" : "";
 
-    // Chat
-    if ((userOrChat as any).title) {
-      const c = userOrChat as TelegramBot.Chat;
-      a.push(`${b}${c.title}${bb}`);
+    const type = (chatOrUser as TelegramBot.Chat).type;
+
+    // Chat that is not private
+    if (type && (type !== "private" || noNameIfPrivateChat)) {
+      const c = chatOrUser as TelegramBot.Chat;
+      a.push(c.title ? `${b}${c.title}${bb}` : "");
       a.push(`[${c.type}]`);
-      if (long) {
-        a.push(c.invite_link ? `(${i}${c.invite_link}${ii})` : "");
+      if (allInfo) {
+        a.push(c.invite_link ? `${i}${c.invite_link}${ii}` : "");
       }
 
-    // User
+    // User or private chat
     } else {
-      const u = userOrChat as TelegramBot.User;
+      const u = chatOrUser as TelegramBot.User;
       a.push(`${b}${u.first_name}${u.last_name ? " " + u.last_name : ""}${bb}`);
       a.push(u.username ? `${i}@${u.username}${ii}` : "");
-      if (long) {
+      if (allInfo) {
         a.push(u.is_bot ? `(BOT)` : "");
         a.push(u.language_code ? `[${u.language_code}]` : "");
       }
@@ -861,7 +868,7 @@ export class TGBotWrapper {
         sendRequestTo,
         `<b>Request for group <i>${requestFor}</i>:</b>\n`
         + ` - User: ${this.chatInfo(msg.from!, true, true)}\n`
-        + ` - Chat: ${this.chatInfo(msg.chat, true, true)}\n`
+        + ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}\n`
         + ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>\n`
         + `Toggle: /${toggleCommand}_${this.commandify(msg.chat.id)}`,
         "HTML"
@@ -918,7 +925,7 @@ export class TGBotWrapper {
         this.sendToGroup(alertGroup,
           `<b>A new user have used the /${c} command</b>\n`
           + ` - User: ${this.chatInfo(msg.from!, true, true)}\n`
-          + ` - Chat: ${this.chatInfo(msg.chat, true, true)}`,
+          + ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`,
           "HTML"
         );
       }

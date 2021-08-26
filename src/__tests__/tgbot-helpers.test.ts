@@ -214,19 +214,33 @@ test("chatInfo with user", () => {
   } as TelegramBot.User;
 
   expect(wrapper.chatInfo(u)).toEqual("FIRSTNAME");
-  expect(wrapper.chatInfo(u, true, true)).toEqual("<b>FIRSTNAME</b>");
+  expect(wrapper.chatInfo(u, true, true, true)).toEqual("<b>FIRSTNAME</b>");
 
   u.username = "USERNAME",
   expect(wrapper.chatInfo(u)).toEqual("FIRSTNAME @USERNAME");
-  expect(wrapper.chatInfo(u, true, true)).toEqual("<b>FIRSTNAME</b> <i>@USERNAME</i>");
+  expect(wrapper.chatInfo(u, true, true, true)).toEqual("<b>FIRSTNAME</b> <i>@USERNAME</i>");
 
   u.last_name = "LASTNAME";
   u.is_bot = true;
   expect(wrapper.chatInfo(u)).toEqual("FIRSTNAME LASTNAME @USERNAME");
-  expect(wrapper.chatInfo(u, true, true)).toEqual("<b>FIRSTNAME LASTNAME</b> <i>@USERNAME</i> (BOT)");
+  expect(wrapper.chatInfo(u, true, true, true)).toEqual("<b>FIRSTNAME LASTNAME</b> <i>@USERNAME</i> (BOT)");
 });
 
-test("chatInfo with chat", () => {
+test("chatInfo with private chat", () => {
+  const c = {
+    id: 4321,
+    first_name: "FIRSTNAME",
+    last_name: "LASTNAME",
+    username: "USERNAME",
+    type: "private",
+  } as TelegramBot.Chat;
+
+  expect(wrapper.chatInfo(c)).toEqual("FIRSTNAME LASTNAME @USERNAME");
+  expect(wrapper.chatInfo(c, true, true)).toEqual("<b>FIRSTNAME LASTNAME</b> <i>@USERNAME</i>");
+  expect(wrapper.chatInfo(c, true, true, true)).toEqual("[private]");
+});
+
+test("chatInfo with group chat", () => {
   const c = {
     id: 4321,
     title: "TITLE",
@@ -237,11 +251,11 @@ test("chatInfo with chat", () => {
   } as TelegramBot.Chat;
 
   expect(wrapper.chatInfo(c)).toEqual("TITLE [supergroup]");
-  expect(wrapper.chatInfo(c, true, true)).toEqual("<b>TITLE</b> [supergroup]");
+  expect(wrapper.chatInfo(c, true, true, true)).toEqual("<b>TITLE</b> [supergroup]");
 
   c.invite_link = "LINK";
   expect(wrapper.chatInfo(c)).toEqual("TITLE [supergroup]");
-  expect(wrapper.chatInfo(c, true, true)).toEqual("<b>TITLE</b> [supergroup] (<i>LINK</i>)");
+  expect(wrapper.chatInfo(c, true, true, true)).toEqual("<b>TITLE</b> [supergroup] <i>LINK</i>");
 });
 
 test("regexp", () => {
