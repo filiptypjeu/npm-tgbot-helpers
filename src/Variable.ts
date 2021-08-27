@@ -118,3 +118,33 @@ export class BooleanVariable extends InternalVariable<boolean> {
     return true;
   };
 }
+
+export class ObjectVariable<T> extends InternalVariable<T> {
+  public set = (value: T, domain?: Domain): boolean => {
+    const d = this.getPersistent(domain);
+    d[this.name] = value;
+    this.setPersistent(d, domain);
+    return true;
+  };
+
+  public setPartial = (value: Partial<T>, domain?: Domain): boolean => {
+    const d = this.getPersistent(domain);
+    d[this.name] = { ...d[this.name], ...value };
+    this.setPersistent(d, domain);
+    return true;
+  };
+
+  public getProperty = <K extends keyof T>(key: K, domain?: Domain): T[K] => {
+    return this.get(domain)[key];
+  }
+
+  public setProperty = <K extends keyof T>(key: K, value: T[K], domain?: Domain): boolean => {
+    const partial: Partial<T> = {};
+    partial[key] = value;
+    return this.setPartial(partial, domain);
+  }
+
+  public resetProperty = <K extends keyof T>(key: K, domain?: Domain): boolean => {
+    return this.setProperty(key, this.defaultValue[key], domain);
+  }
+}

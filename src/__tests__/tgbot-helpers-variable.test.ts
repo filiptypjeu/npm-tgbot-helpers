@@ -1,5 +1,5 @@
 import { LocalStorage } from "node-localstorage";
-import { BooleanVariable, StringVariable, Variable } from "../Variable";
+import { BooleanVariable, ObjectVariable, StringVariable, Variable } from "../Variable";
 
 const ls = new LocalStorage("./src/__tests__/variables/");
 ls.setItem("VARIABLES_", "");
@@ -65,18 +65,18 @@ test("get raw localstorage items", () => {
   expect(ls.getItem("VARIABLES_1234")).toEqual('{"var1":"789","var2":789}');
 });
 
-interface ITest {
+interface ITestA {
   a: string[];
   b: number[];
-  c?: ITest;
+  c?: ITestA;
 }
 
-const d: ITest = {
+const d: ITestA = {
   a: ["a"],
   b: [1],
 };
 
-const var3 = new Variable<ITest>("var3", d, ls);
+const var3 = new Variable<ITestA>("var3", d, ls);
 
 test("get default value for complex type", () => {
   expect(var3.get()).toEqual(d);
@@ -152,4 +152,64 @@ test("booleanvariable", () => {
   expect(var5.get()).toEqual(true);
   expect(var5.set("")).toEqual(true);
   expect(var5.get()).toEqual(false);
+});
+
+interface ITestB {
+  a: number;
+  b?: string;
+  c?: ITestB;
+}
+
+const var6 = new ObjectVariable<ITestB>("var6", { a: 1 }, ls);
+
+test("objectvariable", () => {
+  // Test default value
+  expect(var6.get()).toEqual({ a: 1 });
+  expect(var6.getProperty("a")).toEqual(1);
+  expect(var6.getProperty("b")).toEqual(undefined);
+  expect(var6.getProperty("c")).toEqual(undefined);
+
+  // Test set
+  expect(var6.set({ a: 2, b: "h" })).toEqual(true);
+  expect(var6.get()).toEqual({ a: 2, b: "h" });
+  expect(var6.getProperty("a")).toEqual(2);
+  expect(var6.getProperty("b")).toEqual("h");
+  expect(var6.getProperty("c")).toEqual(undefined);
+
+  // Test setPartial
+  expect(var6.setPartial({ a: 3, c: var6.get() })).toEqual(true);
+  expect(var6.get()).toEqual({ a: 3, b: "h", c: { a: 2, b: "h" } });
+  expect(var6.getProperty("a")).toEqual(3);
+  expect(var6.getProperty("b")).toEqual("h");
+  expect(var6.getProperty("c")).toEqual({ a: 2, b: "h" });
+
+  // Test setPartial undefined
+  expect(var6.setPartial({ c: undefined })).toEqual(true);
+  expect(var6.get()).toEqual({ a: 3, b: "h" });
+
+  // Test setProperty undefined
+  expect(var6.setProperty("b", undefined)).toEqual(true);
+  expect(var6.get()).toEqual({ a: 3 });
+
+  // Test reset
+  var6.reset();
+  expect(var6.get()).toEqual({ a: 1 });
+  expect(var6.getProperty("a")).toEqual(1);
+  expect(var6.getProperty("b")).toEqual(undefined);
+  expect(var6.getProperty("c")).toEqual(undefined);
+
+  // Test setProperty
+  expect(var6.setProperty("a", 5, 1234)).toEqual(true);
+  expect(var6.getProperty("a", 1234)).toEqual(5);
+  expect(var6.setProperty("b", "k", 1234)).toEqual(true);
+  expect(var6.getProperty("b", 1234)).toEqual("k");
+  expect(var6.get(1234)).toEqual({ a: 5, b: "k" });
+
+  // Test resetProperty
+  expect(var6.resetProperty("a", 1234)).toEqual(true);
+  expect(var6.get(1234)).toEqual({ a: 1, b: "k" });
+
+  // Test resetProperty
+  expect(var6.resetProperty("b", 1234)).toEqual(true);
+  expect(var6.get(1234)).toEqual({ a: 1 });
 });
