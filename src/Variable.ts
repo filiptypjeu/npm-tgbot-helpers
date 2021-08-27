@@ -136,15 +136,15 @@ export class ObjectVariable<T> extends InternalVariable<T> {
 
   public getProperty = <K extends keyof T>(key: K, domain?: Domain): T[K] => {
     return this.get(domain)[key];
-  }
+  };
 
   public setProperty = <K extends keyof T>(key: K, value: T[K], domain?: Domain): boolean => {
     const partial: Partial<T> = {};
     partial[key] = value;
     return this.setPartial(partial, domain);
-  }
+  };
 
   public resetProperty = <K extends keyof T>(key: K, domain?: Domain): boolean => {
     return this.setProperty(key, this.defaultValue[key], domain);
-  }
+  };
 }
