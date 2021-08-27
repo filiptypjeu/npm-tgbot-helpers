@@ -67,7 +67,7 @@ abstract class InternalVariable<T> {
 }
 
 export class Variable<T> extends InternalVariable<T> {
-  public set = (value: T | string, domain?: Domain) => {
+  public set = (value: T | string, domain?: Domain): boolean => {
     // If value is given as a string and the internal value is not a string, it means that the value is stringified
     if (this.type !== "string" && typeof value === "string") {
       // Try to parse the value
@@ -92,7 +92,7 @@ export class Variable<T> extends InternalVariable<T> {
 }
 
 export class StringVariable extends InternalVariable<string> {
-  public set = (value: string, domain?: Domain) => {
+  public set = (value: string, domain?: Domain): boolean => {
     const d = this.getPersistent(domain);
 
     d[this.name] = value;
@@ -102,7 +102,7 @@ export class StringVariable extends InternalVariable<string> {
 }
 
 export class BooleanVariable extends InternalVariable<boolean> {
-  public set = (value: boolean | string, domain?: Domain) => {
+  public set = (value: boolean | string, domain?: Domain): boolean => {
     if (typeof value === "string") {
       try {
         value = JSON.parse(value) ? true : false;

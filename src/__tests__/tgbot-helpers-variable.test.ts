@@ -126,7 +126,7 @@ test("test type", () => {
   expect(var3.type).toEqual("object");
 });
 
-const var4 = new StringVariable("var1", "default", ls);
+const var4 = new StringVariable("var4", "default", ls);
 
 test("stringvariable", () => {
   expect(var4.type).toEqual("string");
@@ -135,7 +135,7 @@ test("stringvariable", () => {
   expect(var4.get()).toEqual("987654");
 });
 
-const var5 = new BooleanVariable("var2", false, ls);
+const var5 = new BooleanVariable("var5", false, ls);
 
 test("booleanvariable", () => {
   expect(var5.type).toEqual("boolean");
