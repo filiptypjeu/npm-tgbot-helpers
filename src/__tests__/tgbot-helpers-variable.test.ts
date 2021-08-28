@@ -206,10 +206,10 @@ test("objectvariable", () => {
   expect(var6.get(1234)).toEqual({ a: 5, b: "k" });
 
   // Test resetProperty
-  expect(var6.resetProperty("a", 1234)).toEqual(true);
+  expect(var6.resetProperty("a", 1234)).toEqual(1);
   expect(var6.get(1234)).toEqual({ a: 1, b: "k" });
 
   // Test resetProperty
-  expect(var6.resetProperty("b", 1234)).toEqual(true);
+  expect(var6.resetProperty("b", 1234)).toEqual(undefined);
   expect(var6.get(1234)).toEqual({ a: 1 });
 });

@@ -8,6 +8,7 @@
         "deploy": "bash deploy.sh",
         "dev": "nodemon src/index.ts",
         "format": "prettier --write \"src/**/*.ts\"",
+        "link": "npm run build && npm link",
         "lint": "tslint -p tsconfig.json",
         "lint-fix": "tslint -p tsconfig.json --fix",
         "postversion": "git push && git push --tags",

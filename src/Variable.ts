@@ -144,7 +144,9 @@ export class ObjectVariable<T> extends InternalVariable<T> {
     return this.setPartial(partial, domain);
   };
 
-  public resetProperty = <K extends keyof T>(key: K, domain?: Domain): boolean => {
-    return this.setProperty(key, this.defaultValue[key], domain);
+  public resetProperty = <K extends keyof T>(key: K, domain?: Domain): T[K] => {
+    const value = this.defaultValue[key];
+    this.setProperty(key, value, domain);
+    return value;
   };
 }
