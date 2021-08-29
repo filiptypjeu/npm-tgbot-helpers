@@ -629,7 +629,7 @@ export class TGBotWrapper {
 
   public sendError = async (e: any) => {
     this.botLogger?.error(e);
-    return this.sendToGroup(this.sudoGroup, e.toString() ? e.toString().slice(0, 3000) : "Error...");
+    return this.sendToGroup(this.sudoGroup, e ? e.toString().slice(0, 3000) : "Undefined error");
   };
 
   /**
