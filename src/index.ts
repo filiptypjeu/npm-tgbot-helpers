@@ -14,7 +14,6 @@ momentDurationFormatSetup(moment as any);
 
 /**
  * @todo
- * - Command allowed for multiple groups
  * - Add command for getting user info: name, id, groups etc.
  * - Add default log command
  */
@@ -69,7 +68,7 @@ export interface ITGBotWrapperOptions {
 export interface IBotHelperCommand {
   command: Command;
   regexp?: RegExp;
-  group?: Group;
+  group?: Group | Group[];
   privateOnly?: boolean;
   matchBeginningOnly?: boolean;
   hide?: boolean;
@@ -320,12 +319,16 @@ export class TGBotWrapper {
     let log = "ok";
 
     // Check if the command is deactivated
-    if (c.group && !c.group.isMember(msg.chat.id)) {
+    if (c.group && !Group.isMember(c.group, msg.chat.id)) {
       this.sendTo(msg.chat.id, c.accessDeniedMessage || this.defaultAccessDeniedMessage);
       log = "denied";
+
+    // Check if the command is deactivated
     } else if (!this.sudoGroup.isMember(msg.chat.id) && this.deactivatedCommands.isMember(`/${c}`)) {
       this.sendTo(msg.chat.id, this.defaultCommandDeactivatedMessage);
       log = "deactivated";
+
+    // Check if the command has to be used in a private chat
     } else if (c.privateOnly && msg.chat.type !== "private") {
       this.sendTo(msg.chat.id, this.defaultPrivateOnlyMessage);
       log = "private";
@@ -396,8 +399,8 @@ export class TGBotWrapper {
     // commandsByGroup()?
     const m = new Map<Group | undefined, IBotHelperCommand[]>();
     this.commands.forEach(cmd => {
-      const g = cmd.group;
-      m.set(g, (m.get(g) || []).concat(cmd));
+      const groups = Array.isArray(cmd.group) ? cmd.group : [cmd.group];
+      groups.forEach(g => m.set(g, (m.get(g) || []).concat(cmd)));
     });
 
     return m;
@@ -690,7 +693,7 @@ export class TGBotWrapper {
     return this.sendTo(
       msg.chat.id,
       this.commands
-        .filter(cmd => (cmd.group ? cmd.group.isMember(msg.chat.id) : !cmd.hide))
+        .filter(cmd => (cmd.group ? Group.isMember(cmd.group, msg.chat.id) : !cmd.hide))
         .map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}${cmd.description ? ":  " + cmd.description : ""}`)
         .sort()
         .join("\n\n"),
