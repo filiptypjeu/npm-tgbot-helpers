@@ -38,6 +38,13 @@ export class Group {
   };
 
   /**
+   * A static helper method for checking if a chat/user is part of a single Group or a set of Groups.
+   */
+  public static isMember = (groups: Group | Group[], chatId: ChatID): boolean => {
+    return (Array.isArray(groups) ? groups : [groups]).reduce<boolean>((res, g) => res || g.isMember(chatId), false);
+  }
+
+  /**
    * Remove all members of this group.
    */
   public reset = (): Group => {

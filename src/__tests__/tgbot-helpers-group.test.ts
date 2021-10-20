@@ -71,6 +71,16 @@ test("check if users are members (number)", () => {
   expect(group2.isMember(NaN)).toEqual(false);
 });
 
+test("check if users are members (static helper method)", () => {
+  expect(Group.isMember(group1, "user1")).toEqual(false);
+  expect(Group.isMember(group1, "user2")).toEqual(true);
+  expect(Group.isMember(group1, 1234)).toEqual(false);
+
+  expect(Group.isMember([group1, group2], "user1")).toEqual(false);
+  expect(Group.isMember([group1, group2], "user2")).toEqual(true);
+  expect(Group.isMember([group1, group2], 1234)).toEqual(true);
+});
+
 test("test reset", () => {
   group1.reset();
   group2.reset();
