@@ -42,7 +42,7 @@ export class Group {
    */
   public static isMember = (groups: Group | Group[], chatId: ChatID): boolean => {
     return (Array.isArray(groups) ? groups : [groups]).reduce<boolean>((res, g) => res || g.isMember(chatId), false);
-  }
+  };
 
   /**
    * Remove all members of this group.

@@ -323,12 +323,12 @@ export class TGBotWrapper {
       this.sendTo(msg.chat.id, c.accessDeniedMessage || this.defaultAccessDeniedMessage);
       log = "denied";
 
-    // Check if the command is deactivated
+      // Check if the command is deactivated
     } else if (!this.sudoGroup.isMember(msg.chat.id) && this.deactivatedCommands.isMember(`/${c}`)) {
       this.sendTo(msg.chat.id, this.defaultCommandDeactivatedMessage);
       log = "deactivated";
 
-    // Check if the command has to be used in a private chat
+      // Check if the command has to be used in a private chat
     } else if (c.privateOnly && msg.chat.type !== "private") {
       this.sendTo(msg.chat.id, this.defaultPrivateOnlyMessage);
       log = "private";
