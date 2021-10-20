@@ -117,6 +117,17 @@ export class BooleanVariable extends InternalVariable<boolean> {
     this.setPersistent(d, domain);
     return true;
   };
+
+  /**
+   * Toggle the state of this Variable.
+   *
+   * @returns the new state.
+   */
+  public toggle = (domain?: Domain): boolean => {
+    const newValue = !this.get(domain);
+    this.set(newValue, domain);
+    return newValue;
+  }
 }
 
 export class ObjectVariable<T> extends InternalVariable<T> {

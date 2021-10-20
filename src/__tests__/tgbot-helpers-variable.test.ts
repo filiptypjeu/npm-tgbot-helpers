@@ -154,6 +154,19 @@ test("booleanvariable", () => {
   expect(var5.get()).toEqual(false);
 });
 
+test("booleanvariable toggle", () => {
+  expect(var5.toggle()).toEqual(true);
+  expect(var5.toggle()).toEqual(false);
+  expect(var5.toggle()).toEqual(true);
+
+  expect(var5.toggle("1234")).toEqual(true);
+  expect(var5.toggle("1234")).toEqual(false);
+  expect(var5.toggle("1234")).toEqual(true);
+
+  expect(var5.set(false, "1234")).toEqual(true);
+  expect(var5.toggle("1234")).toEqual(true);
+});
+
 interface ITestB {
   a: number;
   b?: string;
