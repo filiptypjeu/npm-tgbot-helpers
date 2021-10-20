@@ -127,7 +127,7 @@ export class BooleanVariable extends InternalVariable<boolean> {
     const newValue = !this.get(domain);
     this.set(newValue, domain);
     return newValue;
-  }
+  };
 }
 
 export class ObjectVariable<T> extends InternalVariable<T> {
