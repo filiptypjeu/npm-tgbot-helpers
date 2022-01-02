@@ -15,7 +15,7 @@ interface IPersistent {
 abstract class InternalVariable<T> {
   public readonly name: string;
   public readonly ls: LocalStorage;
-  public readonly defaultValue: T;
+  public defaultValue: T;
   public readonly type: string;
 
   constructor(name: string, defaultValue: T, ls: LocalStorage) {
