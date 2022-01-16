@@ -226,3 +226,42 @@ test("objectvariable", () => {
   expect(var6.resetProperty("b", 1234)).toEqual(undefined);
   expect(var6.get(1234)).toEqual({ a: 1 });
 });
+
+
+var mynymber = 0;
+var mydomain: string | undefined;
+const var7 = new Variable<number>("var7", 100, ls, (newValue: number, domain?: string) => {
+  mynymber = newValue + 1;
+  mydomain = domain;
+});
+
+test("variable with callback", () => {
+  // Test default value
+  expect(mynymber).toEqual(0);
+  expect(mydomain).toEqual(undefined);
+
+  // Set value
+  var7.set(42);
+  expect(mynymber).toEqual(43);
+  expect(mydomain).toEqual(undefined);
+
+  // Reset value
+  var7.reset();
+  expect(mynymber).toEqual(101);
+  expect(mydomain).toEqual(undefined);
+
+  // Set value in domain
+  var7.set(42, "abc");
+  expect(mynymber).toEqual(43);
+  expect(mydomain).toEqual("abc");
+
+  // Reset value in domain
+  var7.reset("abc");
+  expect(mynymber).toEqual(101);
+  expect(mydomain).toEqual("abc");
+
+  // Reset value in another domain
+  var7.reset("def");
+  expect(mynymber).toEqual(101);
+  expect(mydomain).toEqual("def");
+});

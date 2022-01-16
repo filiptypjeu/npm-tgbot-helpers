@@ -15,7 +15,7 @@ interface IPersistent {
 abstract class InternalVariable<T> {
   public readonly type: string;
 
-  constructor(public readonly name: string, public defaultValue: T, public readonly ls: LocalStorage) {
+  constructor(public readonly name: string, public defaultValue: T, public readonly ls: LocalStorage, public callback?: (newValue: T, domain?: string) => void) {
     this.type = typeof this.defaultValue;
   }
 
@@ -28,6 +28,9 @@ abstract class InternalVariable<T> {
 
   protected setPersistent = (object: IPersistent, domain?: Domain): void => {
     this.ls.setItem(this.itemName(domain), JSON.stringify(object));
+    if (this.callback) {
+      this.callback(this.get(domain), domain?.toString());
+    }
   };
 
   /**
