@@ -227,7 +227,6 @@ test("objectvariable", () => {
   expect(var6.get(1234)).toEqual({ a: 1 });
 });
 
-
 var mynymber = 0;
 var mydomain: string | undefined;
 const var7 = new Variable<number>("var7", 100, ls, (newValue: number, domain?: string) => {

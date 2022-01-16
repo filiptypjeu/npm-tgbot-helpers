@@ -15,7 +15,12 @@ interface IPersistent {
 abstract class InternalVariable<T> {
   public readonly type: string;
 
-  constructor(public readonly name: string, public defaultValue: T, public readonly ls: LocalStorage, public callback?: (newValue: T, domain?: string) => void) {
+  constructor(
+    public readonly name: string,
+    public defaultValue: T,
+    public readonly ls: LocalStorage,
+    public callback?: (newValue: T, domain?: string) => void
+  ) {
     this.type = typeof this.defaultValue;
   }
 
