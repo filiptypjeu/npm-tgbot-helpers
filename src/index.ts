@@ -3,7 +3,6 @@ import TelegramBot, { Message, ParseMode } from "node-telegram-bot-api";
 import os from "os";
 import readLastLines from "read-last-lines";
 import sanitizeHtml from "sanitize-html";
-import { Logger } from "log4js";
 import moment from "moment";
 import momentDurationFormatSetup from "moment-duration-format";
 import { Group } from "./Group";
@@ -17,6 +16,11 @@ momentDurationFormatSetup(moment as any);
  * - Add command for getting user info: name, id, groups etc.
  * - Add default log command
  */
+
+interface ILogger {
+  info: (message: any) => void;
+  error: (message: any) => void;
+}
 
 export interface IGroupExtended {
   group: Group;
@@ -57,9 +61,9 @@ export interface ITGBotWrapperOptions {
   };
   groups?: (Group | IGroupExtended)[];
   sudoGroup: Group;
-  commandLogger?: Logger;
-  botLogger?: Logger;
-  errorLogger?: Logger;
+  commandLogger?: ILogger;
+  botLogger?: ILogger;
+  errorLogger?: ILogger;
   defaultAccessDeniedMessage?: string;
   defaultPrivateOnlyMessage?: string;
   defaultCommandDeactivatedMessage?: string;
@@ -106,9 +110,9 @@ export class TGBotWrapper {
   public deactivatedCommands: Group;
   private sudoGroup: Group;
 
-  private commandLogger: Logger | undefined;
-  private botLogger: Logger | undefined;
-  private errorLogger: Logger | undefined;
+  private commandLogger: ILogger | undefined;
+  private botLogger: ILogger | undefined;
+  private errorLogger: ILogger | undefined;
 
   public defaultAccessDeniedMessage: string;
   public defaultCommandDeactivatedMessage: string;
