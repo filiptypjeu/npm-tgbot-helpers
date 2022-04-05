@@ -1,7 +1,7 @@
 import TelegramBot = require("node-telegram-bot-api");
 import { LocalStorage } from "node-localstorage";
 import TGBotWrapper, { IBotHelperCommand } from "../index";
-import { Group } from "../Group";
+import Group from "../Group";
 
 jest.mock("node-telegram-bot-api", () => {
   return jest.fn().mockImplementation(() => {
@@ -21,11 +21,13 @@ jest.mock("node-telegram-bot-api", () => {
 });
 
 const ls = new LocalStorage("./src/__tests__/variables/");
-const group = new Group("mygroup", ls).reset();
+const group = new Group("mygroup", ls).clear();
 group.add(11111);
 group.add(22222);
-const sudoGroup = new Group("admin", ls).reset();
+const sudoGroup = new Group("admin", ls).clear();
 sudoGroup.add(33333);
+
+afterAll(() => ls.clear());
 
 const wrapper = new TGBotWrapper({
   telegramBot: new TelegramBot("token"),

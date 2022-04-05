@@ -5,10 +5,9 @@ import readLastLines from "read-last-lines";
 import sanitizeHtml from "sanitize-html";
 import moment from "moment";
 import momentDurationFormatSetup from "moment-duration-format";
-import { Group } from "./Group";
-export { Group } from "./Group";
-import { BooleanVariable, Variable } from "./Variable";
-export { BooleanVariable, StringVariable, ObjectVariable, Variable } from "./Variable";
+import Group from "./Group";
+export * from "./Group";
+import { BooleanVariable, Variable } from "persistance";
 momentDurationFormatSetup(moment as any);
 
 /**
@@ -722,7 +721,7 @@ export class TGBotWrapper {
         return this.sendTo(
           msg.chat.id,
           "<b>Available variables:</b>\n<code>" +
-            this.variables.map((V, i) => `${i} ${V.name}: ${V.type} = ${JSON.stringify(V.get())}`).join("\n") +
+            this.variables.map((V, i) => `${i} ${V.toString()}`).join("\n") +
             "</code>",
           "HTML"
         );
@@ -737,7 +736,7 @@ export class TGBotWrapper {
 
       // Reset variable value
       if (args[1] === "#" || args[1].toLowerCase() === "default") {
-        v.reset();
+        v.clear();
 
         // Set variable
       } else {
@@ -754,7 +753,7 @@ export class TGBotWrapper {
       }
 
       // Get variable
-      return this.sendTo(msg.chat.id, `Variable ${n}: <code>${v.name}: ${v.type} = ${JSON.stringify(v.get())}</code>`, "HTML");
+      return this.sendTo(msg.chat.id, `Variable ${n}: <code>${v.toString()}</code>`, "HTML");
     };
   };
 

@@ -1,54 +1,45 @@
-import { LocalStorage } from "node-localstorage";
-import { ChatID } from "./index";
+import { ILocalStorage, Variable } from "persistance";
 
-export class Group {
-  public readonly name: string;
-  public readonly itemName: string;
-  private ls: LocalStorage;
+type ChatID = string | number;
 
-  constructor(name: string, ls: LocalStorage) {
-    this.name = name;
-    this.ls = ls;
-    this.itemName = "GROUP_" + name;
+class Group {
+  public readonly variable: Variable<string[]>;
+  private readonly domain = "__GROUPS__";
+
+  constructor(public readonly name: string, public readonly ls: ILocalStorage) {
+    this.variable = new Variable<string[]>(`${this.name}`, [], this.ls);
   }
 
-  private setMembers = (members: ChatID[]) => {
-    this.ls.setItem(this.itemName, members.join("\n"));
+  private setMembers(members: string[]) {
+    this.variable.set(members, this.domain);
   };
-
-  public toString = (): string => this.name;
 
   /**
    * Get a list of all current members of this group.
    */
   public get members(): string[] {
-    const str = this.ls.getItem(this.itemName);
-    if (!str) {
-      return [];
-    }
-
-    return str.trim().split("\n");
+    return this.variable.get(this.domain);
   }
 
   /**
    * Check if a chat/user is part of this group.
    */
-  public isMember = (chatId: ChatID): boolean => {
+  public isMember(chatId: ChatID): boolean {
     return this.members.includes(chatId.toString());
   };
 
   /**
    * A static helper method for checking if a chat/user is part of a single Group or a set of Groups.
    */
-  public static isMember = (groups: Group | Group[], chatId: ChatID): boolean => {
+  public static isMember(groups: Group | Group[], chatId: ChatID): boolean {
     return (Array.isArray(groups) ? groups : [groups]).reduce<boolean>((res, g) => res || g.isMember(chatId), false);
   };
 
   /**
    * Remove all members of this group.
    */
-  public reset = (): Group => {
-    this.ls.setItem(this.itemName, "");
+  public clear(): Group {
+    this.variable.clear(this.domain);
     return this;
   };
 
@@ -59,13 +50,13 @@ export class Group {
    */
   public add = (chatId: ChatID): boolean => {
     const members = this.members;
+    const id = chatId.toString();
 
-    if (members.includes(chatId.toString())) {
+    if (members.includes(id)) {
       return false;
     }
 
-    this.setMembers(members.concat([chatId.toString()]));
-
+    this.setMembers(members.concat([id]));
     return true;
   };
 
@@ -76,13 +67,16 @@ export class Group {
    */
   public toggle = (chatId: ChatID): boolean => {
     const members = this.members;
+    const id = chatId.toString();
 
-    if (members.includes(chatId.toString())) {
-      this.setMembers(members.filter(m => m !== chatId.toString()));
+    if (members.includes(id)) {
+      this.setMembers(members.filter(m => m !== id));
       return false;
     }
 
-    this.setMembers(members.concat([chatId.toString()]));
+    this.setMembers(members.concat([id]));
     return true;
   };
 }
+
+export default Group;
