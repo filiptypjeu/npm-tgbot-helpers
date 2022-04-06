@@ -1,4 +1,3 @@
-import { LocalStorage } from "node-localstorage";
 import TelegramBot, { Message, ParseMode } from "node-telegram-bot-api";
 import os from "os";
 import readLastLines from "read-last-lines";
@@ -7,7 +6,7 @@ import moment from "moment";
 import momentDurationFormatSetup from "moment-duration-format";
 import Group from "./Group";
 export * from "./Group";
-import { BooleanVariable, Variable } from "persistance";
+import { BooleanVariable, ILocalStorage, Variable } from "persistance";
 momentDurationFormatSetup(moment as any);
 
 /**
@@ -35,7 +34,7 @@ export interface IGroupExtended {
 
 export interface ITGBotWrapperOptions {
   telegramBot: TelegramBot;
-  localStorage: LocalStorage;
+  localStorage: ILocalStorage;
   variables?: Variable<any>[];
   defaultCommands?: {
     init?: Command;
@@ -95,7 +94,7 @@ export type ChatID = string | number;
 
 export class TGBotWrapper {
   public bot: TelegramBot;
-  private ls: LocalStorage;
+  private ls: ILocalStorage;
 
   public thisUser: Promise<TelegramBot.User>;
   public commands: IBotHelperCommand[] = [];
