@@ -89,6 +89,7 @@ export interface IMessageInfo {
   arguments: string[];
 }
 
+type CommandCallback = (msg: TelegramBot.Message) => void | Promise<void>;
 type Command = string;
 export type ChatID = string | number;
 
@@ -393,8 +394,6 @@ export class TGBotWrapper {
   /**
    * Orders the commnads by the group that can use them.
    *
-   * @param {IBotHelperCommand} cmds Commands to order.
-   *
    * @returns A Map<string, IBotHelperCommand[]> that maps group name to commands.
    */
   public commandsByGroup = (): Map<Group | undefined, IBotHelperCommand[]> => {
@@ -640,9 +639,9 @@ export class TGBotWrapper {
   /**
    * Callback method for a command that respons with the current uptime of the bot and OS.
    */
-  public defaultCommandUptime = (msg: TelegramBot.Message) => {
+  public defaultCommandUptime = (): CommandCallback => msg => {
     const f = "d [days], h [hours], m [minutes and] s [seconds]";
-    this.sendTo(
+    return this.sendTo(
       msg.chat.id,
       `<b>Bot uptime</b>: <i>${moment.duration(Date.now() - this.startTime.valueOf()).format(f)}</i>\n<b>OS uptime</b>: <i>${moment
         .duration(os.uptime() * 1000)
@@ -654,7 +653,7 @@ export class TGBotWrapper {
   /**
    * Callback method for a command that respons with the IP address(es) of the bot.
    */
-  public defaultCommandIP = async (msg: TelegramBot.Message) => {
+  public defaultCommandIP = (): CommandCallback => msg => {
     const ifaces = os.networkInterfaces();
     const ips: string[] = [];
 
@@ -675,7 +674,7 @@ export class TGBotWrapper {
     return this.sendTo(msg.chat.id, ips.length ? ips.join("\n") : "No IP addresses found.");
   };
 
-  public defaultCommandCommands = (msg: TelegramBot.Message) => {
+  public defaultCommandCommands = (): CommandCallback => msg => {
     this.commandsByGroup().forEach((cmds, group) => {
       if (!group || group.isMember(msg.chat.id)) {
         this.sendTo(
@@ -691,7 +690,7 @@ export class TGBotWrapper {
     });
   };
 
-  public defaultCommandHelp = async (msg: TelegramBot.Message) => {
+  public defaultCommandHelp = (): CommandCallback => msg => {
     return this.sendTo(
       msg.chat.id,
       this.commands
@@ -703,57 +702,53 @@ export class TGBotWrapper {
     );
   };
 
-  public defaultCommandKill = (msg: TelegramBot.Message) => {
-    this.sendTo(msg.chat.id, "Good bye!");
-    setTimeout(() => {
-      return process.exit();
-    }, 3000);
+  public defaultCommandKill = (): CommandCallback => msg => {
+    setTimeout(() => process.exit(), 3000);
+    return this.sendTo(msg.chat.id, "Good bye!");
   };
 
-  public defaultCommandVar = () => {
-    return async (msg: TelegramBot.Message) => {
-      const info = this.handleMessage(msg);
-      const args = info.arguments;
+  public defaultCommandVar = (): CommandCallback => msg => {
+    const info = this.handleMessage(msg);
+    const args = info.arguments;
 
-      // Give all variables
-      if (!args[0]) {
-        return this.sendTo(
-          msg.chat.id,
-          "<b>Available variables:</b>\n<code>" +
-            this.variables.map((V, i) => `${i} ${V.toString()}`).join("\n") +
-            "</code>",
-          "HTML"
-        );
-      }
+    // Give all variables
+    if (!args[0]) {
+      return this.sendTo(
+        msg.chat.id,
+        "<b>Available variables:</b>\n<code>" +
+          this.variables.map((V, i) => `${i} ${V.toString()}`).join("\n") +
+          "</code>",
+        "HTML"
+      );
+    }
 
-      // Handle invalid variable number
-      const n = Number(args[0]);
-      const v = this.variables[n];
-      if (!v) {
-        return this.sendTo(msg.chat.id, `Variable ${args[0]} does not exist.`);
-      }
+    // Handle invalid variable number
+    const n = Number(args[0]);
+    const v = this.variables[n];
+    if (!v) {
+      return this.sendTo(msg.chat.id, `Variable ${args[0]} does not exist.`);
+    }
 
-      // Reset variable value
-      if (args[1] === "#" || args[1].toLowerCase() === "default") {
-        v.clear();
+    // Reset variable value
+    if (args[1] === "#" || args[1].toLowerCase() === "default") {
+      v.clear();
 
-        // Set variable
-      } else {
-        // The value should be interpreted as everything past the first argument, not only the second argument
-        const value = info.text!.slice(args[0].length).trim();
+      // Set variable
+    } else {
+      // The value should be interpreted as everything past the first argument, not only the second argument
+      const value = info.text!.slice(args[0].length).trim();
 
-        if (value) {
-          try {
-            v.set(value);
-          } catch (e) {
-            return this.sendTo(msg.chat.id, `Could not set value JSON.parse(${value})`, "HTML");
-          }
+      if (value) {
+        try {
+          v.set(value);
+        } catch (e) {
+          return this.sendTo(msg.chat.id, `Could not set value JSON.parse(${value})`, "HTML");
         }
       }
+    }
 
-      // Get variable
-      return this.sendTo(msg.chat.id, `Variable ${n}: <code>${v.toString()}</code>`, "HTML");
-    };
+    // Get variable
+    return this.sendTo(msg.chat.id, `Variable ${n}: <code>${v.toString()}</code>`, "HTML");
   };
 
   /**
@@ -767,34 +762,32 @@ export class TGBotWrapper {
     successResponse?: string,
     noIdResponse?: string,
     noChatResponse?: string
-  ) => {
-    return (msg: TelegramBot.Message) => {
-      const info = this.handleMessage(msg);
+  ): CommandCallback => msg => {
+    const info = this.handleMessage(msg);
 
-      // No text provided
-      if (!info.text) {
-        return this.sendTo(msg.chat.id, emptyResponse || "No text provided...");
-      }
+    // No text provided
+    if (!info.text) {
+      return this.sendTo(msg.chat.id, emptyResponse || "No text provided...");
+    }
 
-      // No chat id provided
-      const chatId = this.decommandify(info.commandSuffix);
-      if (!chatId) {
-        return this.sendTo(msg.chat.id, noIdResponse || `No chat ID found within the command...`);
-      }
+    // No chat id provided
+    const chatId = this.decommandify(info.commandSuffix);
+    if (!chatId) {
+      return this.sendTo(msg.chat.id, noIdResponse || `No chat ID found within the command...`);
+    }
 
-      this.bot
-        .getChat(chatId)
-        .then(chat => {
-          this.sendTo(msg.chat.id, successResponse || `Message sent to chat ${chatId}!`);
-          this.sendTo(chat.id, messageFormatter(msg) || info.text!, "HTML");
-        })
-        .catch(() => {
-          this.sendTo(msg.chat.id, noChatResponse || `No chat with ID ${chatId} is available to the bot...`);
-          return;
-        });
+    this.bot
+      .getChat(chatId)
+      .then(chat => {
+        this.sendTo(msg.chat.id, successResponse || `Message sent to chat ${chatId}!`);
+        this.sendTo(chat.id, messageFormatter(msg) || info.text!, "HTML");
+      })
+      .catch(() => {
+        this.sendTo(msg.chat.id, noChatResponse || `No chat with ID ${chatId} is available to the bot...`);
+        return;
+      });
 
-      return;
-    };
+    return;
   };
 
   /**
@@ -809,16 +802,14 @@ export class TGBotWrapper {
     messageFormatter: (messageToFormat: TelegramBot.Message) => string,
     emptyResponse?: string,
     successResponse?: string
-  ) => {
-    return (msg: TelegramBot.Message) => {
-      const text = this.handleMessage(msg).text;
-      if (!text) {
-        if (emptyResponse) this.sendTo(msg.chat.id, emptyResponse, "HTML");
-      } else {
-        this.sendToGroup(group, messageFormatter(msg) || text, "HTML");
-        this.sendTo(msg.chat.id, successResponse || `Message sent to group <i>${group.name}</i>!`, "HTML");
-      }
-    };
+  ): CommandCallback => msg => {
+    const text = this.handleMessage(msg).text;
+    if (!text) {
+      if (emptyResponse) this.sendTo(msg.chat.id, emptyResponse, "HTML");
+    } else {
+      this.sendToGroup(group, messageFormatter(msg) || text, "HTML");
+      this.sendTo(msg.chat.id, successResponse || `Message sent to group <i>${group.name}</i>!`, "HTML");
+    }
   };
 
   /**
@@ -827,14 +818,12 @@ export class TGBotWrapper {
    * @param logPath The path to the file to read from.
    * @param keys Optional string to use as a header.
    */
-  public defaultCommandLog = (logPath: string, keys?: string) => {
-    return async (msg: TelegramBot.Message) => {
-      const n = Number(this.handleMessage(msg).arguments[0]);
-      return readLastLines
-        .read(logPath, n < 50 ? n : 50)
-        .then(s => this.sendTo(msg.chat.id, s ? (keys ? `<b>${keys}</b>\n${s}` : s) : `File ${logPath} is empty.`, "HTML"))
-        .catch(e => this.sendError(e));
-    };
+  public defaultCommandLog = (logPath: string, keys?: string): CommandCallback => msg => {
+    const n = Number(this.handleMessage(msg).arguments[0]);
+    readLastLines
+      .read(logPath, n < 50 ? n : 50)
+      .then(s => this.sendTo(msg.chat.id, s ? (keys ? `<b>${keys}</b>\n${s}` : s) : `File ${logPath} is empty.`, "HTML"))
+      .catch(e => this.sendError(e));
   };
 
   /**
@@ -842,20 +831,18 @@ export class TGBotWrapper {
    *
    * @param groupToInitTo The group to add the chat to.
    */
-  public defaultCommandInit = (groupToInitTo: Group) => {
-    return (msg: TelegramBot.Message) => {
-      const userIds = groupToInitTo.members;
-      if (!userIds.length) {
-        if (groupToInitTo.add(msg.chat.id)) {
-          this.sendTo(msg.chat.id, `You have been added to group <i>${groupToInitTo}</i>!`, "HTML");
-        }
-      } else {
-        this.sendTo(msg.chat.id, "No, I don't think so.");
+  public defaultCommandInit = (groupToInitTo: Group): CommandCallback => msg => {
+    const userIds = groupToInitTo.members;
+    if (!userIds.length) {
+      if (groupToInitTo.add(msg.chat.id)) {
+        this.sendTo(msg.chat.id, `You have been added to group <i>${groupToInitTo}</i>!`, "HTML");
       }
-    };
+    } else {
+      this.sendTo(msg.chat.id, "No, I don't think so.");
+    }
   };
 
-  public defaultCommandDeactivate = async (msg: TelegramBot.Message) => {
+  public defaultCommandDeactivate = (): CommandCallback => msg => {
     const arg = this.handleMessage(msg).arguments[0];
     const deactivated = this.deactivatedCommands.members;
 
@@ -882,7 +869,7 @@ export class TGBotWrapper {
       return this.sendTo(msg.chat.id, `Command ${arg} has been ${this.deactivatedCommands.toggle(arg) ? "deactivated" : "reactivated"}!`);
     }
 
-    this.sendTo(msg.chat.id, `Number not correct, or command not starting with '/'.`);
+    return this.sendTo(msg.chat.id, `Number not correct, or command not starting with '/'.`);
   };
 
   /**
@@ -893,21 +880,19 @@ export class TGBotWrapper {
    * @param response The response to send to the user directly after sending the request.
    * @param toggleCommand The command that can be used to grant access to the group in question. The command need to look like "/command_CHATID".
    */
-  public defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, response: string | undefined, toggleCommand: Command) => {
-    return (msg: TelegramBot.Message) => {
-      if (response) {
-        this.sendTo(msg.chat.id, response);
-      }
-      this.sendToGroup(
-        sendRequestTo,
-        `<b>Request for group <i>${requestFor}</i>:</b>\n` +
-          ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
-          ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}\n` +
-          ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>\n` +
-          `Toggle: /${toggleCommand}_${this.commandify(msg.chat.id)}`,
-        "HTML"
-      );
-    };
+  public defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, response: string | undefined, toggleCommand: Command): CommandCallback => msg => {
+    if (response) {
+      this.sendTo(msg.chat.id, response);
+    }
+    this.sendToGroup(
+      sendRequestTo,
+      `<b>Request for group <i>${requestFor}</i>:</b>\n` +
+        ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
+        ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}\n` +
+        ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>\n` +
+        `Toggle: /${toggleCommand}_${this.commandify(msg.chat.id)}`,
+      "HTML"
+    );
   };
 
   /**
@@ -918,25 +903,23 @@ export class TGBotWrapper {
    *
    * @returns A callback method for a command.
    */
-  public defaultCommandToggle = (requestFor: Group, responseToNewMember?: string) => {
-    return (msg: TelegramBot.Message) => {
-      const info = this.handleMessage(msg);
-      const userId = this.decommandify(info.commandSuffix);
-      if (!userId) {
-        this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`, "HTML");
-        return;
-      }
+  public defaultCommandToggle = (requestFor: Group, responseToNewMember?: string): CommandCallback => msg => {
+    const info = this.handleMessage(msg);
+    const userId = this.decommandify(info.commandSuffix);
+    if (!userId) {
+      this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`, "HTML");
+      return;
+    }
 
-      if (requestFor.toggle(userId)) {
-        this.sendTo(msg.chat.id, `Chat ${userId} has been added to group <i>${requestFor}</i>.`, "HTML");
-        if (responseToNewMember) {
-          this.sendTo(userId, responseToNewMember);
-        }
-        return;
+    if (requestFor.toggle(userId)) {
+      this.sendTo(msg.chat.id, `Chat ${userId} has been added to group <i>${requestFor}</i>.`, "HTML");
+      if (responseToNewMember) {
+        this.sendTo(userId, responseToNewMember);
       }
+      return;
+    }
 
-      this.sendTo(msg.chat.id, `Chat ${userId} has been removed from group <i>${requestFor}</i>.`, "HTML");
-    };
+    return this.sendTo(msg.chat.id, `Chat ${userId} has been removed from group <i>${requestFor}</i>.`, "HTML");
   };
 
   /**
@@ -946,47 +929,43 @@ export class TGBotWrapper {
    * @param addToGroup The group the user should be added to when using the command for the first time.
    * @param alertGroup The group to alert.
    */
-  public defaultCommandStart = (response: string, addToGroup?: Group, alertGroup?: Group) => {
-    return (msg: TelegramBot.Message) => {
-      this.sendTo(msg.chat.id, response, "HTML");
+  public defaultCommandStart = (response: string, addToGroup?: Group, alertGroup?: Group): CommandCallback => msg => {
+    this.sendTo(msg.chat.id, response, "HTML");
 
-      if (addToGroup && addToGroup.add(msg.chat.id) && alertGroup) {
-        const c = this.handleMessage(msg).commandBase;
-        this.sendToGroup(
-          alertGroup,
-          `<b>A new user have used the /${c} command</b>\n` +
-            ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
-            ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`,
-          "HTML"
-        );
-      }
-    };
+    if (addToGroup && addToGroup.add(msg.chat.id) && alertGroup) {
+      const c = this.handleMessage(msg).commandBase;
+      this.sendToGroup(
+        alertGroup,
+        `<b>A new user have used the /${c} command</b>\n` +
+          ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
+          ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`,
+        "HTML"
+      );
+    }
   };
 
-  public defaultCommandGroups = () => {
-    return (msg: TelegramBot.Message) => {
-      const group = this.groups[Number(this.handleMessage(msg).arguments[0])];
+  public defaultCommandGroups = (): CommandCallback => msg => {
+    const group = this.groups[Number(this.handleMessage(msg).arguments[0])];
 
-      if (group) {
-        this.groupToUserInfo(group)
-          .then(a => {
-            const message =
-              a.length === 0
-                ? `No chats in group <i>${group.name}</i>.`
-                : `<b>Chats in group <i>${group.name}</i></b>:\n${a.map(s => ` - ${s}`).join("\n")}`;
-            this.sendTo(msg.chat.id, message, "HTML");
-          })
-          .catch(e => this.sendError(e));
-      } else {
-        this.sendTo(
-          msg.chat.id,
-          this.groups.length > 0
-            ? `<b>Available groups</b>:\n${this.groups.map((g, i) => `${i} <i>${g}</i> (${g.members.length})`).join("\n")}`
-            : "No groups available...",
-          "HTML"
-        );
-      }
-    };
+    if (group) {
+      this.groupToUserInfo(group)
+        .then(a => {
+          const message =
+            a.length === 0
+              ? `No chats in group <i>${group.name}</i>.`
+              : `<b>Chats in group <i>${group.name}</i></b>:\n${a.map(s => ` - ${s}`).join("\n")}`;
+          this.sendTo(msg.chat.id, message, "HTML");
+        })
+        .catch(e => this.sendError(e));
+    } else {
+      this.sendTo(
+        msg.chat.id,
+        this.groups.length > 0
+          ? `<b>Available groups</b>:\n${this.groups.map((g, i) => `${i} <i>${g}</i> (${g.members.length})`).join("\n")}`
+          : "No groups available...",
+        "HTML"
+      );
+    }
   };
 }
 
