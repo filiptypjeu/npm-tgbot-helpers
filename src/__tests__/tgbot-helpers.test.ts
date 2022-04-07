@@ -1,6 +1,6 @@
 import TelegramBot = require("node-telegram-bot-api");
 import { LocalStorage } from "node-localstorage";
-import TGBotWrapper, { IBotHelperCommand } from "../index";
+import TGBotWrapper, { ICommand } from "../index";
 import Group from "../Group";
 
 jest.mock("node-telegram-bot-api", () => {
@@ -261,7 +261,7 @@ test("chatInfo with group chat", () => {
 });
 
 test("regexp", () => {
-  const cmd: IBotHelperCommand = {
+  const cmd: ICommand = {
     command: "cmd",
     callback: () => {},
   };
@@ -312,7 +312,7 @@ test("regexp", () => {
 });
 
 test("regexp matchBeginningOnly", () => {
-  const cmd: IBotHelperCommand = {
+  const cmd: ICommand = {
     command: "cmd",
     callback: () => {},
     matchBeginningOnly: true,

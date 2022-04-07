@@ -20,7 +20,7 @@ export interface ILogger {
   error: (message: any) => void;
 }
 
-export interface IGroupExtended {
+export interface IGroup {
   // The group
   group: Group;
   // The command for requesting access to the group
@@ -66,7 +66,7 @@ export interface ITGBotWrapperOptions {
       description?: string;
     };
   };
-  groups?: (Group | IGroupExtended)[];
+  groups?: (Group | IGroup)[];
   sudoGroup: Group;
   commandLogger?: ILogger;
   botLogger?: ILogger;
@@ -76,7 +76,7 @@ export interface ITGBotWrapperOptions {
   defaultCommandDeactivatedMessage?: string;
 }
 
-export interface IBotHelperCommand {
+export interface ICommand {
   command: Command;
   regexp?: RegExp;
   group?: Group | Group[];
@@ -107,7 +107,7 @@ export class TGBotWrapper {
   private ls: ILocalStorage;
 
   public thisUser: Promise<TelegramBot.User>;
-  public commands: IBotHelperCommand[] = [];
+  public commands: ICommand[] = [];
   public groups: Group[] = [];
 
   public sudoEchoVar: BooleanVariable;
@@ -311,7 +311,7 @@ export class TGBotWrapper {
     this.onInit();
   }
 
-  public addCustomCommands = async (commands: IBotHelperCommand[]) => {
+  public async addCustomCommands(commands: ICommand[]) {
     for (const c of commands) {
       this._addCommand(c);
     }
@@ -319,7 +319,7 @@ export class TGBotWrapper {
     this.botLogger?.info(`Added ${commands.length} custom commands.`);
   };
 
-  private onInit = async () => {
+  private async onInit() {
     const username = (await this.thisUser).username || "UNKNWON_BOT";
 
     const msg = `${username} initialized with ${this.commands.length} commands, ${this.groups.length} groups and ${this.variables.length} variables.`;
@@ -327,7 +327,7 @@ export class TGBotWrapper {
     this.sendToGroup(this.sudoGroup, msg).catch(() => {});
   };
 
-  private _callback = (msg: TelegramBot.Message, c: IBotHelperCommand): boolean => {
+  private canRunCommand(msg: TelegramBot.Message, c: ICommand): boolean {
     let log = "ok";
 
     // Check if the command is deactivated
@@ -352,13 +352,13 @@ export class TGBotWrapper {
     return log === "ok";
   };
 
-  private _addCommand = async (command: IBotHelperCommand) => {
+  private async _addCommand(command: ICommand) {
     if (this.commands.find(c => c.command === command.command)) {
       throw new Error(`Duplicate command "${command.command}"`);
     }
 
     this.bot.onText(this.commandRegExp(command, (await this.thisUser).username), msg => {
-      if (!this._callback(msg, command)) {
+      if (!this.canRunCommand(msg, command)) {
         return;
       }
 
@@ -372,7 +372,7 @@ export class TGBotWrapper {
     this.commands.push(command);
   };
 
-  private _addGroup = (group: Group) => {
+  private _addGroup(group: Group): void {
     if (this.groups.find(g => g.name === group.name)) {
       throw new Error(`Duplicate group "${group.name}"`);
     }
@@ -380,7 +380,7 @@ export class TGBotWrapper {
     this.groups.push(group);
   };
 
-  private _addVariable = (variable: Variable<any>) => {
+  private _addVariable(variable: Variable<any>): void {
     if (this.variables.find(v => v.name === variable.name)) {
       throw new Error(`Duplicate variable "${variable.name}"`);
     }
@@ -390,41 +390,36 @@ export class TGBotWrapper {
 
   /**
    * Creates a RegExp for a command.
-   *
-   * @param c Command in question.
-   * @param botName Name of the TelegramBot.
    */
-  public commandRegExp = (c: IBotHelperCommand, botName: string = ""): RegExp => {
+  public commandRegExp(c: ICommand, botName: string = ""): RegExp {
     return c.matchBeginningOnly
       ? new RegExp(`^/${c.command}[a-zA-Z0-9_]*(?:$|@${botName}\\b|[^a-zA-Z0-9_@])`)
       : new RegExp(`^/${c.command}(?:$|@${botName}\\b|[^a-zA-Z0-9_@])`);
   };
 
   /**
-   * Orders the commnads by the group that can use them.
-   *
-   * @returns A Map<string, IBotHelperCommand[]> that maps group name to commands.
+   * Orders the commands by the group that can use them.
    */
-  public commandsByGroup = (): Map<Group | undefined, IBotHelperCommand[]> => {
-    // commandsByGroup()?
-    const m = new Map<Group | undefined, IBotHelperCommand[]>();
-    this.commands.forEach(cmd => {
+  public commandsByGroup(): Map<Group | undefined, ICommand[]> {
+    const m = new Map<Group | undefined, ICommand[]>();
+    for (let cmd of this.commands) {
       const groups = Array.isArray(cmd.group) ? cmd.group : [cmd.group];
       groups.forEach(g => m.set(g, (m.get(g) || []).concat(cmd)));
-    });
-
+    }
     return m;
   };
 
-  public getCommand = (msg: TelegramBot.Message): Command => {
+  /**
+   * Get command used in a message.
+   */
+  public getCommand(msg: TelegramBot.Message): Command {
     if (!msg.entities || msg.entities[0].offset !== 0 || msg.entities[0].type !== "bot_command") {
       return "";
     }
-
     return msg.text!.slice(1, msg.entities[0].length).split("@")[0];
   };
 
-  public handleMessage = (msg: TelegramBot.Message): IMessageInfo => {
+  public handleMessage(msg: TelegramBot.Message): IMessageInfo {
     let commandLength = 0;
     if (msg.entities) {
       const entity = msg.entities[0];
@@ -470,7 +465,7 @@ export class TGBotWrapper {
     return info;
   };
 
-  public groupToUserInfo = async (group: Group) => {
+  public async groupToUserInfo(group: Group) {
     return await Promise.all(
       group.members.map(async n => {
         return await this.bot.getChat(n).then(chat => this.chatInfo(chat, true, true));
@@ -478,12 +473,15 @@ export class TGBotWrapper {
     );
   };
 
-  public commandify = (userId: ChatID): string => {
-    return userId.toString().replace("-", "m");
+  /**
+   * Make a user id into a string that can be used as a command.
+   */
+  public commandify(chat_id: ChatID): string {
+    return chat_id.toString().replace("-", "m");
   };
 
-  public decommandify = (userId?: string): ChatID | undefined => {
-    const n = Number(userId?.replace("m", "-"));
+  public decommandify(chat_id: string): ChatID | undefined {
+    const n = Number(chat_id?.replace("m", "-"));
     return Number.isSafeInteger(n) ? n : undefined;
   };
 
@@ -492,12 +490,12 @@ export class TGBotWrapper {
    * 2. Chat, private => name and username etc.
    * 3. Chat, not private => title and type etc.
    */
-  public chatInfo = (
+  public chatInfo(
     chatOrUser: TelegramBot.Chat | TelegramBot.User,
     allInfo: boolean = false,
     tags: boolean = false,
     noNameIfPrivateChat: boolean = false
-  ): string => {
+  ): string {
     const a: (string | undefined)[] = [];
 
     const i = tags ? "<i>" : "";
@@ -640,7 +638,7 @@ export class TGBotWrapper {
     return Promise.all(group.members.map(id => this.sendTo(id, text, sendOptions)));
   }
 
-  public sendError = async (e: any) => {
+  public async sendError(e: any) {
     this.botLogger?.error(e);
     return this.sendToGroup(this.sudoGroup, e ? e.toString().slice(0, 3000) : "Undefined error");
   };
@@ -780,7 +778,7 @@ export class TGBotWrapper {
     }
 
     // No chat id provided
-    const chatId = this.decommandify(info.commandSuffix);
+    const chatId = this.decommandify(info.commandSuffix || "");
     if (!chatId) {
       return this.sendTo(msg.chat.id, noIdResponse || `No chat ID found within the command...`);
     }
@@ -914,7 +912,7 @@ export class TGBotWrapper {
    */
   public defaultCommandToggle = (requestFor: Group, responseToNewMember?: string): CommandCallback => msg => {
     const info = this.handleMessage(msg);
-    const userId = this.decommandify(info.commandSuffix);
+    const userId = this.decommandify(info.commandSuffix || "");
     if (!userId) {
       this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`, "HTML");
       return;
