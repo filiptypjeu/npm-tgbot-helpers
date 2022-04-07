@@ -1,4 +1,4 @@
-import TelegramBot, { Message, ParseMode } from "node-telegram-bot-api";
+import TelegramBot from "node-telegram-bot-api";
 import os from "os";
 import readLastLines from "read-last-lines";
 import sanitizeHtml from "sanitize-html";
@@ -15,20 +15,29 @@ momentDurationFormatSetup(moment as any);
  * - Add default log command
  */
 
-interface ILogger {
+export interface ILogger {
   info: (message: any) => void;
   error: (message: any) => void;
 }
 
 export interface IGroupExtended {
+  // The group
   group: Group;
-  requestCommand: string;
+  // The command for requesting access to the group
+  requestCommand: Command;
+  // The immediate response given to a request
   requestResponse?: string;
+  // If only private chats can request access or not
   requestPrivateOnly?: boolean;
+  // Description of the request command
   requestDescription?: string;
+  // The group to send the request to
   sendRequestTo: Group;
+  // The command used to toggle chat membership in this group
   toggleCommand: Command;
+  // Description of the toggle command
   toggleDescription?: string;
+  // The response to the user when added to the group
   responseWhenAdded?: string;
 }
 
@@ -77,7 +86,7 @@ export interface IBotHelperCommand {
   description?: string;
   chatAcion?: TelegramBot.ChatAction;
   accessDeniedMessage?: string;
-  callback: (msg: Message) => void;
+  callback: (msg: TelegramBot.Message) => void;
 }
 
 export interface IMessageInfo {
@@ -541,11 +550,11 @@ export class TGBotWrapper {
    * @param silent True = no notification is shown for the receiver.
    * @param noPreview  True = no web page preview is shown for the receiver.
    */
-  public async sendTo(userId: ChatID, text: string, parseMode?: ParseMode, silent?: boolean, noPreview?: boolean): Promise<void>;
+  public async sendTo(userId: ChatID, text: string, parseMode?: TelegramBot.ParseMode, silent?: boolean, noPreview?: boolean): Promise<void>;
   public async sendTo(
     userId: ChatID,
     text: string,
-    param?: ParseMode | TelegramBot.SendMessageOptions,
+    param?: TelegramBot.ParseMode | TelegramBot.SendMessageOptions,
     silent: boolean = false,
     noPreview: boolean = false
   ) {
@@ -612,11 +621,11 @@ export class TGBotWrapper {
    * @param silent True = no notification is shown for the receiver.
    * @param noPreview  True = no web page preview is shown for the receiver.
    */
-  public async sendToGroup(group: Group, text: string, parseMode?: ParseMode, silent?: boolean, noPreview?: boolean): Promise<void[]>;
+  public async sendToGroup(group: Group, text: string, parseMode?: TelegramBot.ParseMode, silent?: boolean, noPreview?: boolean): Promise<void[]>;
   public async sendToGroup(
     group: Group,
     text: string,
-    param?: ParseMode | TelegramBot.SendMessageOptions,
+    param?: TelegramBot.ParseMode | TelegramBot.SendMessageOptions,
     silent: boolean = false,
     noPreview: boolean = false
   ) {
