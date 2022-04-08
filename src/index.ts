@@ -358,14 +358,8 @@ export class TGBotWrapper {
     }
 
     this.bot.onText(this.commandRegExp(command, (await this.thisUser).username), msg => {
-      if (!this.canRunCommand(msg, command)) {
-        return;
-      }
-
-      if (command.chatAcion) {
-        this.bot.sendChatAction(msg.chat.id, command.chatAcion);
-      }
-
+      if (!this.canRunCommand(msg, command)) return;
+      if (command.chatAcion) this.bot.sendChatAction(msg.chat.id, command.chatAcion);
       return command.callback(msg);
     });
 
@@ -436,7 +430,7 @@ export class TGBotWrapper {
       return info;
     }
 
-    const command = msg.text.substr(0, commandLength).trim();
+    const command = msg.text.substring(0, commandLength).trim();
     if (command) {
       info.command = command;
       info.commandBase = command.split("_")[0].slice(1);
@@ -466,11 +460,8 @@ export class TGBotWrapper {
   };
 
   public async groupToUserInfo(group: Group) {
-    return await Promise.all(
-      group.members.map(async n => {
-        return await this.bot.getChat(n).then(chat => this.chatInfo(chat, true, true));
-      })
-    );
+    const chats = await Promise.all(group.members.map(chat_id => this.bot.getChat(chat_id)));
+    return chats.map(c => this.chatInfo(c, true, true));
   };
 
   /**
@@ -531,75 +522,66 @@ export class TGBotWrapper {
       .trim();
   };
 
+  private getSendOptions(param: TelegramBot.ParseMode | TelegramBot.SendMessageOptions | undefined, silent: boolean = false, noPreview: boolean = false): TelegramBot.SendMessageOptions {
+    return typeof param === "object" ? param : {
+        parse_mode: param || "HTML",
+        disable_notification: silent,
+        disable_web_page_preview: noPreview,
+      };
+  }
+
   /**
    * Send a message to a chat. The message is automatically split into several messages if too long.
    *
-   * @param userId The chat ID to send the message to.
+   * @param chat_id The chat ID to send the message to.
    * @param text The text to send.
    * @param options Message options.
    */
-  public async sendTo(userId: ChatID, text: string, options?: TelegramBot.SendMessageOptions): Promise<void>;
+  public async sendTo(chat_id: ChatID, text: string, options?: TelegramBot.SendMessageOptions): Promise<void>;
   /**
    * Send a message to a chat. The message is automatically split into several messages if too long.
    *
-   * @param userId The chat ID to send the message to.
+   * @param chat_id The chat ID to send the message to.
    * @param text The text to send.
    * @param parseMode How to parse the text.
    * @param silent True = no notification is shown for the receiver.
    * @param noPreview  True = no web page preview is shown for the receiver.
    */
-  public async sendTo(userId: ChatID, text: string, parseMode?: TelegramBot.ParseMode, silent?: boolean, noPreview?: boolean): Promise<void>;
+  public async sendTo(chat_id: ChatID, text: string, parseMode?: TelegramBot.ParseMode, silent?: boolean, noPreview?: boolean): Promise<void>;
   public async sendTo(
-    userId: ChatID,
+    chat_id: ChatID,
     text: string,
     param?: TelegramBot.ParseMode | TelegramBot.SendMessageOptions,
-    silent: boolean = false,
-    noPreview: boolean = false
+    silent?: boolean,
+    noPreview?: boolean
   ) {
-    const sendOptions: TelegramBot.SendMessageOptions =
-      typeof param === "object"
-        ? param
-        : {
-            parse_mode: param,
-            disable_notification: silent,
-            disable_web_page_preview: noPreview,
-          };
+    const sendOptions = this.getSendOptions(param, silent, noPreview);
+    const textToSend = sendOptions.parse_mode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i", "code"] }) : text;
+    try {
+      return await this.bot.sendMessage(chat_id, textToSend, sendOptions);
+    } catch (e: any) {
+      if (e.code !== "ETELEGRAM") return this.errorLogger?.error(e);
+      if (e.response.body.description !== "Bad Request: message is too long") this.sendError(`Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`);
 
-    this.bot
-      .sendMessage(userId, sendOptions.parse_mode === "HTML" ? sanitizeHtml(text, { allowedTags: ["b", "i", "code"] }) : text, sendOptions)
-      .catch(async e => {
-        if (e.code === "ETELEGRAM") {
-          if (e.response.body.description === "Bad Request: message is too long") {
-            const splitText = text.split("\n");
-            if (splitText.length > 1) {
-              await this.sendTo(
-                userId,
-                splitText
-                  .slice(0, Math.round(splitText.length / 2))
-                  .join("\n")
-                  .trim(),
-                sendOptions
-              );
-              await this.sendTo(
-                userId,
-                splitText
-                  .slice(Math.round(splitText.length / 2))
-                  .join("\n")
-                  .trim(),
-                sendOptions
-              );
-            } else {
-              this.sendError(`Message to userId ${userId} too long (${text.length} characters)...`);
-            }
-          } else {
-            this.sendError(
-              `Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`
-            );
-          }
-        } else {
-          this.errorLogger?.error(e);
-        }
-      });
+      const splitText = text.split("\n");
+      if (splitText.length <= 1) this.sendError(`Message to chat ${chat_id} too long (${text.length} characters)...`);
+      await this.sendTo(
+        chat_id,
+        splitText
+          .slice(0, Math.round(splitText.length / 2))
+          .join("\n")
+          .trim(),
+        sendOptions
+      );
+      await this.sendTo(
+        chat_id,
+        splitText
+          .slice(Math.round(splitText.length / 2))
+          .join("\n")
+          .trim(),
+        sendOptions
+      );
+    }
   }
 
   /**
@@ -624,17 +606,10 @@ export class TGBotWrapper {
     group: Group,
     text: string,
     param?: TelegramBot.ParseMode | TelegramBot.SendMessageOptions,
-    silent: boolean = false,
-    noPreview: boolean = false
+    silent?: boolean,
+    noPreview?: boolean
   ) {
-    const sendOptions: TelegramBot.SendMessageOptions =
-      typeof param === "object"
-        ? param
-        : {
-            parse_mode: param,
-            disable_notification: silent,
-            disable_web_page_preview: noPreview,
-          };
+    const sendOptions = this.getSendOptions(param, silent, noPreview);
     return Promise.all(group.members.map(id => this.sendTo(id, text, sendOptions)));
   }
 
@@ -652,8 +627,7 @@ export class TGBotWrapper {
       msg.chat.id,
       `<b>Bot uptime</b>: <i>${moment.duration(Date.now() - this.startTime.valueOf()).format(f)}</i>\n<b>OS uptime</b>: <i>${moment
         .duration(os.uptime() * 1000)
-        .format(f)}</i>`,
-      "HTML"
+        .format(f)}</i>`
     );
   };
 
@@ -690,8 +664,7 @@ export class TGBotWrapper {
             cmds
               .map(cmd => `${cmd.hide ? "(" : ""}/${cmd.command}${cmd.privateOnly ? "*" : ""}${cmd.hide ? ")" : ""}`)
               .sort()
-              .join("\n"),
-          "HTML"
+              .join("\n")
         );
       }
     });
@@ -704,8 +677,7 @@ export class TGBotWrapper {
         .filter(cmd => (cmd.group ? Group.isMember(cmd.group, msg.chat.id) : !cmd.hide))
         .map(cmd => `/${cmd.command}${cmd.privateOnly ? "*" : ""}${cmd.description ? ":  " + cmd.description : ""}`)
         .sort()
-        .join("\n\n"),
-      "HTML"
+        .join("\n\n")
     );
   };
 
@@ -724,8 +696,7 @@ export class TGBotWrapper {
         msg.chat.id,
         "<b>Available variables:</b>\n<code>" +
           this.variables.map((V, i) => `${i} ${V.toString()}`).join("\n") +
-          "</code>",
-        "HTML"
+          "</code>"
       );
     }
 
@@ -749,13 +720,13 @@ export class TGBotWrapper {
         try {
           v.set(value);
         } catch (e) {
-          return this.sendTo(msg.chat.id, `Could not set value JSON.parse(${value})`, "HTML");
+          return this.sendTo(msg.chat.id, `Could not set value JSON.parse(${value})`);
         }
       }
     }
 
     // Get variable
-    return this.sendTo(msg.chat.id, `Variable ${n}: <code>${v.toString()}</code>`, "HTML");
+    return this.sendTo(msg.chat.id, `Variable ${n}: <code>${v.toString()}</code>`);
   };
 
   /**
@@ -778,19 +749,19 @@ export class TGBotWrapper {
     }
 
     // No chat id provided
-    const chatId = this.decommandify(info.commandSuffix || "");
-    if (!chatId) {
+    const chat_id = this.decommandify(info.commandSuffix || "");
+    if (!chat_id) {
       return this.sendTo(msg.chat.id, noIdResponse || `No chat ID found within the command...`);
     }
 
     this.bot
-      .getChat(chatId)
+      .getChat(chat_id)
       .then(chat => {
-        this.sendTo(msg.chat.id, successResponse || `Message sent to chat ${chatId}!`);
-        this.sendTo(chat.id, messageFormatter(msg) || info.text!, "HTML");
+        this.sendTo(msg.chat.id, successResponse || `Message sent to chat ${chat_id}!`);
+        this.sendTo(chat.id, messageFormatter(msg) || info.text!);
       })
       .catch(() => {
-        this.sendTo(msg.chat.id, noChatResponse || `No chat with ID ${chatId} is available to the bot...`);
+        this.sendTo(msg.chat.id, noChatResponse || `No chat with ID ${chat_id} is available to the bot...`);
         return;
       });
 
@@ -799,10 +770,6 @@ export class TGBotWrapper {
 
   /**
    * Creates a callback method for a command that let's a user send a message to all members of a group. It is used by writing the message after the command, i.e. "/command <message>".
-   *
-   * @param groupName The name of the group to send the message to.
-   * @param emptyResponse The response to the user if the command is used without a message.
-   * @param messageFormatter Function that formats the message to be sent. Can be used to for example add a header or footer to the message.
    */
   public defaultCommandSendToGroup = (
     group: Group,
@@ -812,10 +779,10 @@ export class TGBotWrapper {
   ): CommandCallback => msg => {
     const text = this.handleMessage(msg).text;
     if (!text) {
-      if (emptyResponse) this.sendTo(msg.chat.id, emptyResponse, "HTML");
+      if (emptyResponse) this.sendTo(msg.chat.id, emptyResponse);
     } else {
-      this.sendToGroup(group, messageFormatter(msg) || text, "HTML");
-      this.sendTo(msg.chat.id, successResponse || `Message sent to group <i>${group.name}</i>!`, "HTML");
+      this.sendToGroup(group, messageFormatter(msg) || text);
+      this.sendTo(msg.chat.id, successResponse || `Message sent to group <i>${group.name}</i>!`);
     }
   };
 
@@ -828,8 +795,8 @@ export class TGBotWrapper {
   public defaultCommandLog = (logPath: string, keys?: string): CommandCallback => msg => {
     const n = Number(this.handleMessage(msg).arguments[0]);
     readLastLines
-      .read(logPath, n < 50 ? n : 50)
-      .then(s => this.sendTo(msg.chat.id, s ? (keys ? `<b>${keys}</b>\n${s}` : s) : `File ${logPath} is empty.`, "HTML"))
+      .read(logPath, n)
+      .then(s => this.sendTo(msg.chat.id, s ? (keys ? `<b>${keys}</b>\n${s}` : s) : `File ${logPath} is empty.`))
       .catch(e => this.sendError(e));
   };
 
@@ -842,7 +809,7 @@ export class TGBotWrapper {
     const userIds = groupToInitTo.members;
     if (!userIds.length) {
       if (groupToInitTo.add(msg.chat.id)) {
-        this.sendTo(msg.chat.id, `You have been added to group <i>${groupToInitTo}</i>!`, "HTML");
+        this.sendTo(msg.chat.id, `You have been added to group <i>${groupToInitTo}</i>!`);
       }
     } else {
       this.sendTo(msg.chat.id, "No, I don't think so.");
@@ -861,8 +828,7 @@ export class TGBotWrapper {
           deactivated.length === 0
             ? "No deactivated commands found."
             : `<b>Deactivated commands:</b>\n${deactivated.map((v, i) => `${i} ${v}`).join("\n")}`
-        }`,
-        "HTML"
+        }`
       );
     }
 
@@ -897,8 +863,7 @@ export class TGBotWrapper {
         ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
         ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}\n` +
         ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>\n` +
-        `Toggle: /${toggleCommand}_${this.commandify(msg.chat.id)}`,
-      "HTML"
+        `Toggle: /${toggleCommand}_${this.commandify(msg.chat.id)}`
     );
   };
 
@@ -914,19 +879,19 @@ export class TGBotWrapper {
     const info = this.handleMessage(msg);
     const userId = this.decommandify(info.commandSuffix || "");
     if (!userId) {
-      this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`, "HTML");
+      this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`);
       return;
     }
 
     if (requestFor.toggle(userId)) {
-      this.sendTo(msg.chat.id, `Chat ${userId} has been added to group <i>${requestFor}</i>.`, "HTML");
+      this.sendTo(msg.chat.id, `Chat ${userId} has been added to group <i>${requestFor}</i>.`);
       if (responseToNewMember) {
         this.sendTo(userId, responseToNewMember);
       }
       return;
     }
 
-    return this.sendTo(msg.chat.id, `Chat ${userId} has been removed from group <i>${requestFor}</i>.`, "HTML");
+    return this.sendTo(msg.chat.id, `Chat ${userId} has been removed from group <i>${requestFor}</i>.`);
   };
 
   /**
@@ -937,7 +902,7 @@ export class TGBotWrapper {
    * @param alertGroup The group to alert.
    */
   public defaultCommandStart = (response: string, addToGroup?: Group, alertGroup?: Group): CommandCallback => msg => {
-    this.sendTo(msg.chat.id, response, "HTML");
+    this.sendTo(msg.chat.id, response);
 
     if (addToGroup && addToGroup.add(msg.chat.id) && alertGroup) {
       const c = this.handleMessage(msg).commandBase;
@@ -945,8 +910,7 @@ export class TGBotWrapper {
         alertGroup,
         `<b>A new user have used the /${c} command</b>\n` +
           ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
-          ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`,
-        "HTML"
+          ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`
       );
     }
   };
@@ -961,7 +925,7 @@ export class TGBotWrapper {
             a.length === 0
               ? `No chats in group <i>${group.name}</i>.`
               : `<b>Chats in group <i>${group.name}</i></b>:\n${a.map(s => ` - ${s}`).join("\n")}`;
-          this.sendTo(msg.chat.id, message, "HTML");
+          this.sendTo(msg.chat.id, message);
         })
         .catch(e => this.sendError(e));
     } else {
@@ -969,8 +933,7 @@ export class TGBotWrapper {
         msg.chat.id,
         this.groups.length > 0
           ? `<b>Available groups</b>:\n${this.groups.map((g, i) => `${i} <i>${g}</i> (${g.members.length})`).join("\n")}`
-          : "No groups available...",
-        "HTML"
+          : "No groups available..."
       );
     }
   };

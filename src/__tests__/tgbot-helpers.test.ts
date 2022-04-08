@@ -3,6 +3,8 @@ import { LocalStorage } from "node-localstorage";
 import TGBotWrapper, { ICommand } from "../index";
 import Group from "../Group";
 
+const sendMessageMock = jest.fn();
+
 jest.mock("node-telegram-bot-api", () => {
   return jest.fn().mockImplementation(() => {
     return {
@@ -11,7 +13,7 @@ jest.mock("node-telegram-bot-api", () => {
         return new Promise(resolve => resolve({ username: "botname" } as TelegramBot.User));
       },
       getChat: jest.fn(),
-      sendMessage: jest.fn(),
+      sendMessage: sendMessageMock,
       onText: jest.fn(),
       startPolling: jest.fn(),
       isPolling: jest.fn(),
@@ -121,82 +123,79 @@ test("decommandify", () => {
   expect(wrapper.decommandify("n12345")).toEqual(undefined);
 });
 
-test("sendTo", () => {
-  expect(wrapper.sendTo(123, "message")).rejects.toThrowError();
-  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
-    parse_mode: undefined,
-    disable_notification: false,
-    disable_web_page_preview: false,
+describe("send messages", () => {
+  beforeEach(() => sendMessageMock.mockClear());
+
+  test("sendTo", () => {
+    expect(wrapper.sendTo(123, "message"));
+    expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
+      parse_mode: "HTML",
+      disable_notification: false,
+      disable_web_page_preview: false,
+    });
+
+    expect(wrapper.sendTo(123, "message", "Markdown"));
+    expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
+      parse_mode: "Markdown",
+      disable_notification: false,
+      disable_web_page_preview: false,
+    });
+
+    expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(2);
   });
 
-  expect(wrapper.sendTo(123, "message", "HTML")).rejects.toThrowError();
-  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
-    parse_mode: "HTML",
-    disable_notification: false,
-    disable_web_page_preview: false,
+  test("sendToGroup", () => {
+    expect(wrapper.sendToGroup(group, "message"));
+
+    expect(wrapper.bot.sendMessage).toHaveBeenCalledWith("11111", "message", {
+      parse_mode: "HTML",
+      disable_notification: false,
+      disable_web_page_preview: false,
+    });
+    expect(wrapper.bot.sendMessage).toHaveBeenCalledWith("22222", "message", {
+      parse_mode: "HTML",
+      disable_notification: false,
+      disable_web_page_preview: false,
+    });
+
+    expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(2);
   });
 
-  expect(wrapper.sendTo(123, "message", "Markdown")).rejects.toThrowError();
-  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
-    parse_mode: "Markdown",
-    disable_notification: false,
-    disable_web_page_preview: false,
+  test("sendError", () => {
+    expect(wrapper.sendError("Error"));
+
+    expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith("33333", "Error", {
+      parse_mode: "HTML",
+      disable_notification: false,
+      disable_web_page_preview: false,
+    });
+
+    expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(1);
   });
 
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(4);
-});
+  test("sendTo SendMessageOptions", () => {
+    expect(
+      wrapper.sendTo(123, "message", { parse_mode: "Markdown", disable_web_page_preview: true, disable_notification: true })
+    );
+    expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
+      parse_mode: "Markdown",
+      disable_notification: true,
+      disable_web_page_preview: true,
+    });
 
-test("sendToGroup", () => {
-  expect(wrapper.sendToGroup(group, "message")).rejects.toThrowError();
-
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledWith("11111", "message", {
-    parse_mode: undefined,
-    disable_notification: false,
-    disable_web_page_preview: false,
-  });
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledWith("22222", "message", {
-    parse_mode: undefined,
-    disable_notification: false,
-    disable_web_page_preview: false,
+    expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(1);
   });
 
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(6);
-});
+  test("sendTo sanitize HTML", () => {
+    expect(wrapper.sendTo(123, "<b>text</b><<>&text<i>texxxttt</i>&", "HTML", true));
+    expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", {
+      parse_mode: "HTML",
+      disable_notification: true,
+      disable_web_page_preview: false,
+    });
 
-test("sendError", () => {
-  expect(wrapper.sendError("Error")).rejects.toThrowError();
-
-  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith("33333", "Error", {
-    parse_mode: undefined,
-    disable_notification: false,
-    disable_web_page_preview: false,
+    expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(1);
   });
-
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(7);
-});
-
-test("sendTo SendMessageOptions", () => {
-  expect(
-    wrapper.sendTo(123, "message", { parse_mode: "Markdown", disable_web_page_preview: true, disable_notification: true })
-  ).rejects.toThrowError();
-  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
-    parse_mode: "Markdown",
-    disable_notification: true,
-    disable_web_page_preview: true,
-  });
-
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(8);
-});
-
-test("sendTo sanitize HTML", () => {
-  expect(wrapper.sendTo(123, "<b>text</b><<>&text<i>texxxttt</i>&", "HTML", true)).rejects.toThrowError();
-  expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "<b>text</b>&lt;&lt;&gt;&amp;text<i>texxxttt</i>&amp;", {
-    parse_mode: "HTML",
-    disable_notification: true,
-    disable_web_page_preview: false,
-  });
-
-  expect(wrapper.bot.sendMessage).toHaveBeenCalledTimes(9);
 });
 
 test("groupToUserInfo", () => {
