@@ -2,7 +2,7 @@ import { ILocalStorage, Variable } from "persistance";
 
 type ChatID = string | number;
 
-class Group {
+export class Group {
   public readonly variable: Variable<string[]>;
   private readonly domain = "__GROUPS__";
 
@@ -78,5 +78,3 @@ class Group {
     return true;
   };
 }
-
-export default Group;

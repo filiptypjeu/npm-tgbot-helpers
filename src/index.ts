@@ -4,7 +4,7 @@ import readLastLines from "read-last-lines";
 import sanitizeHtml from "sanitize-html";
 import moment from "moment";
 import momentDurationFormatSetup from "moment-duration-format";
-import Group from "./Group";
+import { Group } from "./Group";
 export * from "./Group";
 import { BooleanVariable, ILocalStorage, Variable } from "persistance";
 momentDurationFormatSetup(moment as any);
