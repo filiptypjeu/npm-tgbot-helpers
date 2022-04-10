@@ -1,7 +1,7 @@
 import TelegramBot = require("node-telegram-bot-api");
 import { LocalStorage } from "node-localstorage";
 import TGBotWrapper, { ICommand } from "../index";
-import Group from "../Group";
+import { Group } from "../Group";
 
 const sendMessageMock = jest.fn();
 

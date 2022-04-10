@@ -1,5 +1,5 @@
 import { LocalStorage } from "node-localstorage";
-import Group from "../Group";
+import { Group } from "../Group";
 
 const ls = new LocalStorage("./src/__tests__/variables/");
 

@@ -51,7 +51,6 @@ export interface ITGBotWrapperOptions {
     userInfo?: Command;
     deactivate?: Command;
     help?: Command;
-    kill?: Command;
     ip?: Command;
     var?: Command;
     groups?: Command;
@@ -103,24 +102,24 @@ type Command = string;
 export type ChatID = string | number;
 
 export class TGBotWrapper {
-  public bot: TelegramBot;
-  private ls: ILocalStorage;
+  public readonly bot: TelegramBot;
+  private readonly ls: ILocalStorage;
 
-  public thisUser: Promise<TelegramBot.User>;
-  public commands: ICommand[] = [];
-  public groups: Group[] = [];
+  public readonly thisUser: Promise<TelegramBot.User>;
+  public readonly commands: ICommand[] = [];
+  public readonly groups: Group[] = [];
 
-  public sudoEchoVar: BooleanVariable;
-  public sudoLogVar: BooleanVariable;
-  public variables: Variable<any>[] = [];
+  public readonly sudoEchoVar: BooleanVariable;
+  public readonly sudoLogVar: BooleanVariable;
+  public readonly variables: Variable<any>[] = [];
 
-  public startTime: Date;
-  public deactivatedCommands: Group;
-  private sudoGroup: Group;
+  public readonly startTime: Date;
+  public readonly deactivatedCommands: Group;
+  private readonly sudoGroup: Group;
 
-  private commandLogger: ILogger | undefined;
-  private botLogger: ILogger | undefined;
-  private errorLogger: ILogger | undefined;
+  public commandLogger: ILogger | undefined;
+  public botLogger: ILogger | undefined;
+  public errorLogger: ILogger | undefined;
 
   public defaultAccessDeniedMessage: string;
   public defaultCommandDeactivatedMessage: string;
@@ -205,23 +204,13 @@ export class TGBotWrapper {
       });
     }
 
-    if (o.defaultCommands?.kill) {
-      this._addCommand({
-        command: o.defaultCommands.kill,
-        group: o.sudoGroup,
-        privateOnly: true,
-        chatAcion: "typing",
-        description: "Kill the bot.",
-        callback: this.defaultCommandKill,
-      });
-    }
-
     if (o.defaultCommands?.start) {
+      const c = o.defaultCommands.start;
       this._addCommand({
         command: "start",
         chatAcion: "typing",
-        callback: this.defaultCommandStart(o.defaultCommands.start.greeting, o.defaultCommands.start.addToGroup, o.sudoGroup),
-        description: o.defaultCommands.start.description,
+        callback: this.defaultCommandStart(c.greeting, c.addToGroup, o.sudoGroup),
+        description: c.description,
       });
     }
 
@@ -246,11 +235,12 @@ export class TGBotWrapper {
     }
 
     if (o.defaultCommands?.commands) {
+      const c = o.defaultCommands.commands;
       this._addCommand({
-        command: o.defaultCommands.commands.command,
-        group: o.defaultCommands.commands.availableFor,
+        command: c.command,
+        group: c.availableFor,
         chatAcion: "typing",
-        description: o.defaultCommands.commands.description,
+        description: c.description,
         callback: this.defaultCommandCommands,
       });
     }
@@ -621,7 +611,7 @@ export class TGBotWrapper {
   /**
    * Callback method for a command that respons with the current uptime of the bot and OS.
    */
-  public defaultCommandUptime = (): CommandCallback => msg => {
+  private defaultCommandUptime = (): CommandCallback => msg => {
     const f = "d [days], h [hours], m [minutes and] s [seconds]";
     return this.sendTo(
       msg.chat.id,
@@ -634,7 +624,7 @@ export class TGBotWrapper {
   /**
    * Callback method for a command that respons with the IP address(es) of the bot.
    */
-  public defaultCommandIP = (): CommandCallback => msg => {
+  private defaultCommandIP = (): CommandCallback => msg => {
     const ifaces = os.networkInterfaces();
     const ips: string[] = [];
 
@@ -655,7 +645,7 @@ export class TGBotWrapper {
     return this.sendTo(msg.chat.id, ips.length ? ips.join("\n") : "No IP addresses found.");
   };
 
-  public defaultCommandCommands = (): CommandCallback => msg => {
+  private defaultCommandCommands = (): CommandCallback => msg => {
     this.commandsByGroup().forEach((cmds, group) => {
       if (!group || group.isMember(msg.chat.id)) {
         this.sendTo(
@@ -670,7 +660,7 @@ export class TGBotWrapper {
     });
   };
 
-  public defaultCommandHelp = (): CommandCallback => msg => {
+  private defaultCommandHelp = (): CommandCallback => msg => {
     return this.sendTo(
       msg.chat.id,
       this.commands
@@ -681,12 +671,7 @@ export class TGBotWrapper {
     );
   };
 
-  public defaultCommandKill = (): CommandCallback => msg => {
-    setTimeout(() => process.exit(), 3000);
-    return this.sendTo(msg.chat.id, "Good bye!");
-  };
-
-  public defaultCommandVar = (): CommandCallback => msg => {
+  private defaultCommandVar = (): CommandCallback => msg => {
     const info = this.handleMessage(msg);
     const args = info.arguments;
 
@@ -734,7 +719,7 @@ export class TGBotWrapper {
    *
    * @param messageFormatter Function that formats the message to be sent. Can be used to for example add a header or footer to the message.
    */
-  public defaultCommandSendTo = (
+  private defaultCommandSendTo = (
     messageFormatter: (messageToFormat: TelegramBot.Message) => string,
     emptyResponse?: string,
     successResponse?: string,
@@ -771,7 +756,7 @@ export class TGBotWrapper {
   /**
    * Creates a callback method for a command that let's a user send a message to all members of a group. It is used by writing the message after the command, i.e. "/command <message>".
    */
-  public defaultCommandSendToGroup = (
+  private defaultCommandSendToGroup = (
     group: Group,
     messageFormatter: (messageToFormat: TelegramBot.Message) => string,
     emptyResponse?: string,
@@ -792,7 +777,7 @@ export class TGBotWrapper {
    * @param logPath The path to the file to read from.
    * @param keys Optional string to use as a header.
    */
-  public defaultCommandLog = (logPath: string, keys?: string): CommandCallback => msg => {
+  private defaultCommandLog = (logPath: string, keys?: string): CommandCallback => msg => {
     const n = Number(this.handleMessage(msg).arguments[0]);
     readLastLines
       .read(logPath, n)
@@ -805,7 +790,7 @@ export class TGBotWrapper {
    *
    * @param groupToInitTo The group to add the chat to.
    */
-  public defaultCommandInit = (groupToInitTo: Group): CommandCallback => msg => {
+  private defaultCommandInit = (groupToInitTo: Group): CommandCallback => msg => {
     const userIds = groupToInitTo.members;
     if (!userIds.length) {
       if (groupToInitTo.add(msg.chat.id)) {
@@ -816,7 +801,7 @@ export class TGBotWrapper {
     }
   };
 
-  public defaultCommandDeactivate = (): CommandCallback => msg => {
+  private defaultCommandDeactivate = (): CommandCallback => msg => {
     const arg = this.handleMessage(msg).arguments[0];
     const deactivated = this.deactivatedCommands.members;
 
@@ -853,7 +838,7 @@ export class TGBotWrapper {
    * @param response The response to send to the user directly after sending the request.
    * @param toggleCommand The command that can be used to grant access to the group in question. The command need to look like "/command_CHATID".
    */
-  public defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, response: string | undefined, toggleCommand: Command): CommandCallback => msg => {
+  private defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, response: string | undefined, toggleCommand: Command): CommandCallback => msg => {
     if (response) {
       this.sendTo(msg.chat.id, response);
     }
@@ -875,7 +860,7 @@ export class TGBotWrapper {
    *
    * @returns A callback method for a command.
    */
-  public defaultCommandToggle = (requestFor: Group, responseToNewMember?: string): CommandCallback => msg => {
+  private defaultCommandToggle = (requestFor: Group, responseToNewMember?: string): CommandCallback => msg => {
     const info = this.handleMessage(msg);
     const userId = this.decommandify(info.commandSuffix || "");
     if (!userId) {
@@ -901,7 +886,7 @@ export class TGBotWrapper {
    * @param addToGroup The group the user should be added to when using the command for the first time.
    * @param alertGroup The group to alert.
    */
-  public defaultCommandStart = (response: string, addToGroup?: Group, alertGroup?: Group): CommandCallback => msg => {
+  private defaultCommandStart = (response: string, addToGroup?: Group, alertGroup?: Group): CommandCallback => msg => {
     this.sendTo(msg.chat.id, response);
 
     if (addToGroup && addToGroup.add(msg.chat.id) && alertGroup) {
@@ -915,7 +900,7 @@ export class TGBotWrapper {
     }
   };
 
-  public defaultCommandGroups = (): CommandCallback => msg => {
+  private defaultCommandGroups = (): CommandCallback => msg => {
     const group = this.groups[Number(this.handleMessage(msg).arguments[0])];
 
     if (group) {
@@ -936,6 +921,23 @@ export class TGBotWrapper {
           : "No groups available..."
       );
     }
+  };
+
+  public defaultCommands = {
+    uptime: this.defaultCommandUptime,
+    ip: this.defaultCommandIP,
+    commands: this.defaultCommandCommands,
+    help: this.defaultCommandHelp,
+    var: this.defaultCommandVar,
+    sendTo: this.defaultCommandSendTo,
+    sendToGroup: this.defaultCommandSendToGroup,
+    log: this.defaultCommandLog,
+    init: this.defaultCommandInit,
+    deactivate: this.defaultCommandDeactivate,
+    request: this.defaultCommandRequest,
+    toggle: this.defaultCommandToggle,
+    start: this.defaultCommandStart,
+    groups: this.defaultCommandGroups,
   };
 }
 
