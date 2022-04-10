@@ -174,9 +174,7 @@ describe("send messages", () => {
   });
 
   test("sendTo SendMessageOptions", () => {
-    expect(
-      wrapper.sendTo(123, "message", { parse_mode: "Markdown", disable_web_page_preview: true, disable_notification: true })
-    );
+    expect(wrapper.sendTo(123, "message", { parse_mode: "Markdown", disable_web_page_preview: true, disable_notification: true }));
     expect(wrapper.bot.sendMessage).toHaveBeenLastCalledWith(123, "message", {
       parse_mode: "Markdown",
       disable_notification: true,

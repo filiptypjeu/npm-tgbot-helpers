@@ -307,7 +307,7 @@ export class TGBotWrapper {
     }
 
     this.botLogger?.info(`Added ${commands.length} custom commands.`);
-  };
+  }
 
   private async onInit() {
     const username = (await this.thisUser).username || "UNKNWON_BOT";
@@ -315,7 +315,7 @@ export class TGBotWrapper {
     const msg = `${username} initialized with ${this.commands.length} commands, ${this.groups.length} groups and ${this.variables.length} variables.`;
     this.botLogger?.info(msg);
     this.sendToGroup(this.sudoGroup, msg).catch(() => {});
-  };
+  }
 
   private canRunCommand(msg: TelegramBot.Message, c: ICommand): boolean {
     let log = "ok";
@@ -340,7 +340,7 @@ export class TGBotWrapper {
     this.commandLogger?.info(`${this.chatInfo(msg.from!)} : /${c.command} [${log}]`);
 
     return log === "ok";
-  };
+  }
 
   private async _addCommand(command: ICommand) {
     if (this.commands.find(c => c.command === command.command)) {
@@ -354,7 +354,7 @@ export class TGBotWrapper {
     });
 
     this.commands.push(command);
-  };
+  }
 
   private _addGroup(group: Group): void {
     if (this.groups.find(g => g.name === group.name)) {
@@ -362,7 +362,7 @@ export class TGBotWrapper {
     }
 
     this.groups.push(group);
-  };
+  }
 
   private _addVariable(variable: Variable<any>): void {
     if (this.variables.find(v => v.name === variable.name)) {
@@ -370,7 +370,7 @@ export class TGBotWrapper {
     }
 
     this.variables.push(variable);
-  };
+  }
 
   /**
    * Creates a RegExp for a command.
@@ -379,19 +379,19 @@ export class TGBotWrapper {
     return c.matchBeginningOnly
       ? new RegExp(`^/${c.command}[a-zA-Z0-9_]*(?:$|@${botName}\\b|[^a-zA-Z0-9_@])`)
       : new RegExp(`^/${c.command}(?:$|@${botName}\\b|[^a-zA-Z0-9_@])`);
-  };
+  }
 
   /**
    * Orders the commands by the group that can use them.
    */
   public commandsByGroup(): Map<Group | undefined, ICommand[]> {
     const m = new Map<Group | undefined, ICommand[]>();
-    for (let cmd of this.commands) {
+    for (const cmd of this.commands) {
       const groups = Array.isArray(cmd.group) ? cmd.group : [cmd.group];
       groups.forEach(g => m.set(g, (m.get(g) || []).concat(cmd)));
     }
     return m;
-  };
+  }
 
   /**
    * Get command used in a message.
@@ -401,7 +401,7 @@ export class TGBotWrapper {
       return "";
     }
     return msg.text!.slice(1, msg.entities[0].length).split("@")[0];
-  };
+  }
 
   public handleMessage(msg: TelegramBot.Message): IMessageInfo {
     let commandLength = 0;
@@ -447,24 +447,24 @@ export class TGBotWrapper {
     }
 
     return info;
-  };
+  }
 
   public async groupToUserInfo(group: Group) {
     const chats = await Promise.all(group.members.map(chat_id => this.bot.getChat(chat_id)));
     return chats.map(c => this.chatInfo(c, true, true));
-  };
+  }
 
   /**
    * Make a user id into a string that can be used as a command.
    */
   public commandify(chat_id: ChatID): string {
     return chat_id.toString().replace("-", "m");
-  };
+  }
 
   public decommandify(chat_id: string): ChatID | undefined {
     const n = Number(chat_id?.replace("m", "-"));
     return Number.isSafeInteger(n) ? n : undefined;
-  };
+  }
 
   /**
    * 1. User => name and username etc.
@@ -510,14 +510,20 @@ export class TGBotWrapper {
       .filter(s => s)
       .join(" ")
       .trim();
-  };
+  }
 
-  private getSendOptions(param: TelegramBot.ParseMode | TelegramBot.SendMessageOptions | undefined, silent: boolean = false, noPreview: boolean = false): TelegramBot.SendMessageOptions {
-    return typeof param === "object" ? param : {
-        parse_mode: param || "HTML",
-        disable_notification: silent,
-        disable_web_page_preview: noPreview,
-      };
+  private getSendOptions(
+    param: TelegramBot.ParseMode | TelegramBot.SendMessageOptions | undefined,
+    silent: boolean = false,
+    noPreview: boolean = false
+  ): TelegramBot.SendMessageOptions {
+    return typeof param === "object"
+      ? param
+      : {
+          parse_mode: param || "HTML",
+          disable_notification: silent,
+          disable_web_page_preview: noPreview,
+        };
   }
 
   /**
@@ -537,7 +543,13 @@ export class TGBotWrapper {
    * @param silent True = no notification is shown for the receiver.
    * @param noPreview  True = no web page preview is shown for the receiver.
    */
-  public async sendTo(chat_id: ChatID, text: string, parseMode?: TelegramBot.ParseMode, silent?: boolean, noPreview?: boolean): Promise<void>;
+  public async sendTo(
+    chat_id: ChatID,
+    text: string,
+    parseMode?: TelegramBot.ParseMode,
+    silent?: boolean,
+    noPreview?: boolean
+  ): Promise<void>;
   public async sendTo(
     chat_id: ChatID,
     text: string,
@@ -551,7 +563,10 @@ export class TGBotWrapper {
       return await this.bot.sendMessage(chat_id, textToSend, sendOptions);
     } catch (e: any) {
       if (e.code !== "ETELEGRAM") return this.errorLogger?.error(e);
-      if (e.response.body.description !== "Bad Request: message is too long") this.sendError(`Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`);
+      if (e.response.body.description !== "Bad Request: message is too long")
+        this.sendError(
+          `Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`
+        );
 
       const splitText = text.split("\n");
       if (splitText.length <= 1) this.sendError(`Message to chat ${chat_id} too long (${text.length} characters)...`);
@@ -591,7 +606,13 @@ export class TGBotWrapper {
    * @param silent True = no notification is shown for the receiver.
    * @param noPreview  True = no web page preview is shown for the receiver.
    */
-  public async sendToGroup(group: Group, text: string, parseMode?: TelegramBot.ParseMode, silent?: boolean, noPreview?: boolean): Promise<void[]>;
+  public async sendToGroup(
+    group: Group,
+    text: string,
+    parseMode?: TelegramBot.ParseMode,
+    silent?: boolean,
+    noPreview?: boolean
+  ): Promise<void[]>;
   public async sendToGroup(
     group: Group,
     text: string,
@@ -606,7 +627,7 @@ export class TGBotWrapper {
   public async sendError(e: any) {
     this.botLogger?.error(e);
     return this.sendToGroup(this.sudoGroup, e ? e.toString().slice(0, 3000) : "Undefined error");
-  };
+  }
 
   /**
    * Callback method for a command that respons with the current uptime of the bot and OS.
@@ -679,9 +700,7 @@ export class TGBotWrapper {
     if (!args[0]) {
       return this.sendTo(
         msg.chat.id,
-        "<b>Available variables:</b>\n<code>" +
-          this.variables.map((V, i) => `${i} ${V.toString()}`).join("\n") +
-          "</code>"
+        "<b>Available variables:</b>\n<code>" + this.variables.map((V, i) => `${i} ${V.toString()}`).join("\n") + "</code>"
       );
     }
 
@@ -719,57 +738,61 @@ export class TGBotWrapper {
    *
    * @param messageFormatter Function that formats the message to be sent. Can be used to for example add a header or footer to the message.
    */
-  private defaultCommandSendTo = (
-    messageFormatter: (messageToFormat: TelegramBot.Message) => string,
-    emptyResponse?: string,
-    successResponse?: string,
-    noIdResponse?: string,
-    noChatResponse?: string
-  ): CommandCallback => msg => {
-    const info = this.handleMessage(msg);
+  private defaultCommandSendTo =
+    (
+      messageFormatter: (messageToFormat: TelegramBot.Message) => string,
+      emptyResponse?: string,
+      successResponse?: string,
+      noIdResponse?: string,
+      noChatResponse?: string
+    ): CommandCallback =>
+    msg => {
+      const info = this.handleMessage(msg);
 
-    // No text provided
-    if (!info.text) {
-      return this.sendTo(msg.chat.id, emptyResponse || "No text provided...");
-    }
+      // No text provided
+      if (!info.text) {
+        return this.sendTo(msg.chat.id, emptyResponse || "No text provided...");
+      }
 
-    // No chat id provided
-    const chat_id = this.decommandify(info.commandSuffix || "");
-    if (!chat_id) {
-      return this.sendTo(msg.chat.id, noIdResponse || `No chat ID found within the command...`);
-    }
+      // No chat id provided
+      const chat_id = this.decommandify(info.commandSuffix || "");
+      if (!chat_id) {
+        return this.sendTo(msg.chat.id, noIdResponse || `No chat ID found within the command...`);
+      }
 
-    this.bot
-      .getChat(chat_id)
-      .then(chat => {
-        this.sendTo(msg.chat.id, successResponse || `Message sent to chat ${chat_id}!`);
-        this.sendTo(chat.id, messageFormatter(msg) || info.text!);
-      })
-      .catch(() => {
-        this.sendTo(msg.chat.id, noChatResponse || `No chat with ID ${chat_id} is available to the bot...`);
-        return;
-      });
+      this.bot
+        .getChat(chat_id)
+        .then(chat => {
+          this.sendTo(msg.chat.id, successResponse || `Message sent to chat ${chat_id}!`);
+          this.sendTo(chat.id, messageFormatter(msg) || info.text!);
+        })
+        .catch(() => {
+          this.sendTo(msg.chat.id, noChatResponse || `No chat with ID ${chat_id} is available to the bot...`);
+          return;
+        });
 
-    return;
-  };
+      return;
+    };
 
   /**
    * Creates a callback method for a command that let's a user send a message to all members of a group. It is used by writing the message after the command, i.e. "/command <message>".
    */
-  private defaultCommandSendToGroup = (
-    group: Group,
-    messageFormatter: (messageToFormat: TelegramBot.Message) => string,
-    emptyResponse?: string,
-    successResponse?: string
-  ): CommandCallback => msg => {
-    const text = this.handleMessage(msg).text;
-    if (!text) {
-      if (emptyResponse) this.sendTo(msg.chat.id, emptyResponse);
-    } else {
-      this.sendToGroup(group, messageFormatter(msg) || text);
-      this.sendTo(msg.chat.id, successResponse || `Message sent to group <i>${group.name}</i>!`);
-    }
-  };
+  private defaultCommandSendToGroup =
+    (
+      group: Group,
+      messageFormatter: (messageToFormat: TelegramBot.Message) => string,
+      emptyResponse?: string,
+      successResponse?: string
+    ): CommandCallback =>
+    msg => {
+      const text = this.handleMessage(msg).text;
+      if (!text) {
+        if (emptyResponse) this.sendTo(msg.chat.id, emptyResponse);
+      } else {
+        this.sendToGroup(group, messageFormatter(msg) || text);
+        this.sendTo(msg.chat.id, successResponse || `Message sent to group <i>${group.name}</i>!`);
+      }
+    };
 
   /**
    * Creates a callback method for a command that reads the last lines from a certain file and sends them to the chat. The amount of lines can be given as an argument when using the command.
@@ -777,29 +800,33 @@ export class TGBotWrapper {
    * @param logPath The path to the file to read from.
    * @param keys Optional string to use as a header.
    */
-  private defaultCommandLog = (logPath: string, keys?: string): CommandCallback => msg => {
-    const n = Number(this.handleMessage(msg).arguments[0]);
-    readLastLines
-      .read(logPath, n)
-      .then(s => this.sendTo(msg.chat.id, s ? (keys ? `<b>${keys}</b>\n${s}` : s) : `File ${logPath} is empty.`))
-      .catch(e => this.sendError(e));
-  };
+  private defaultCommandLog =
+    (logPath: string, keys?: string): CommandCallback =>
+    msg => {
+      const n = Number(this.handleMessage(msg).arguments[0]);
+      readLastLines
+        .read(logPath, n)
+        .then(s => this.sendTo(msg.chat.id, s ? (keys ? `<b>${keys}</b>\n${s}` : s) : `File ${logPath} is empty.`))
+        .catch(e => this.sendError(e));
+    };
 
   /**
    * Creates a callback method for a command that adds a chat to a certain gruop. Useful when for example starting the bot for the first time and adding yourself as the first admin.
    *
    * @param groupToInitTo The group to add the chat to.
    */
-  private defaultCommandInit = (groupToInitTo: Group): CommandCallback => msg => {
-    const userIds = groupToInitTo.members;
-    if (!userIds.length) {
-      if (groupToInitTo.add(msg.chat.id)) {
-        this.sendTo(msg.chat.id, `You have been added to group <i>${groupToInitTo}</i>!`);
+  private defaultCommandInit =
+    (groupToInitTo: Group): CommandCallback =>
+    msg => {
+      const userIds = groupToInitTo.members;
+      if (!userIds.length) {
+        if (groupToInitTo.add(msg.chat.id)) {
+          this.sendTo(msg.chat.id, `You have been added to group <i>${groupToInitTo}</i>!`);
+        }
+      } else {
+        this.sendTo(msg.chat.id, "No, I don't think so.");
       }
-    } else {
-      this.sendTo(msg.chat.id, "No, I don't think so.");
-    }
-  };
+    };
 
   private defaultCommandDeactivate = (): CommandCallback => msg => {
     const arg = this.handleMessage(msg).arguments[0];
@@ -838,19 +865,21 @@ export class TGBotWrapper {
    * @param response The response to send to the user directly after sending the request.
    * @param toggleCommand The command that can be used to grant access to the group in question. The command need to look like "/command_CHATID".
    */
-  private defaultCommandRequest = (requestFor: Group, sendRequestTo: Group, response: string | undefined, toggleCommand: Command): CommandCallback => msg => {
-    if (response) {
-      this.sendTo(msg.chat.id, response);
-    }
-    this.sendToGroup(
-      sendRequestTo,
-      `<b>Request for group <i>${requestFor}</i>:</b>\n` +
-        ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
-        ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}\n` +
-        ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>\n` +
-        `Toggle: /${toggleCommand}_${this.commandify(msg.chat.id)}`
-    );
-  };
+  private defaultCommandRequest =
+    (requestFor: Group, sendRequestTo: Group, response: string | undefined, toggleCommand: Command): CommandCallback =>
+    msg => {
+      if (response) {
+        this.sendTo(msg.chat.id, response);
+      }
+      this.sendToGroup(
+        sendRequestTo,
+        `<b>Request for group <i>${requestFor}</i>:</b>\n` +
+          ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
+          ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}\n` +
+          ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>\n` +
+          `Toggle: /${toggleCommand}_${this.commandify(msg.chat.id)}`
+      );
+    };
 
   /**
    * Create a callback method for a command that adds a certain chat to a group. The command has to be in the form "/<CMD>_<CHATID>", so that the chat ID in question can be retrieved from the command itself.
@@ -860,24 +889,26 @@ export class TGBotWrapper {
    *
    * @returns A callback method for a command.
    */
-  private defaultCommandToggle = (requestFor: Group, responseToNewMember?: string): CommandCallback => msg => {
-    const info = this.handleMessage(msg);
-    const userId = this.decommandify(info.commandSuffix || "");
-    if (!userId) {
-      this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`);
-      return;
-    }
-
-    if (requestFor.toggle(userId)) {
-      this.sendTo(msg.chat.id, `Chat ${userId} has been added to group <i>${requestFor}</i>.`);
-      if (responseToNewMember) {
-        this.sendTo(userId, responseToNewMember);
+  private defaultCommandToggle =
+    (requestFor: Group, responseToNewMember?: string): CommandCallback =>
+    msg => {
+      const info = this.handleMessage(msg);
+      const userId = this.decommandify(info.commandSuffix || "");
+      if (!userId) {
+        this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`);
+        return;
       }
-      return;
-    }
 
-    return this.sendTo(msg.chat.id, `Chat ${userId} has been removed from group <i>${requestFor}</i>.`);
-  };
+      if (requestFor.toggle(userId)) {
+        this.sendTo(msg.chat.id, `Chat ${userId} has been added to group <i>${requestFor}</i>.`);
+        if (responseToNewMember) {
+          this.sendTo(userId, responseToNewMember);
+        }
+        return;
+      }
+
+      return this.sendTo(msg.chat.id, `Chat ${userId} has been removed from group <i>${requestFor}</i>.`);
+    };
 
   /**
    * Created a callback method for a simple /start command. A response is sent to the chat, and the chat ID is saved to a group. Another group can also be notified of this.
@@ -886,19 +917,21 @@ export class TGBotWrapper {
    * @param addToGroup The group the user should be added to when using the command for the first time.
    * @param alertGroup The group to alert.
    */
-  private defaultCommandStart = (response: string, addToGroup?: Group, alertGroup?: Group): CommandCallback => msg => {
-    this.sendTo(msg.chat.id, response);
+  private defaultCommandStart =
+    (response: string, addToGroup?: Group, alertGroup?: Group): CommandCallback =>
+    msg => {
+      this.sendTo(msg.chat.id, response);
 
-    if (addToGroup && addToGroup.add(msg.chat.id) && alertGroup) {
-      const c = this.handleMessage(msg).commandBase;
-      this.sendToGroup(
-        alertGroup,
-        `<b>A new user have used the /${c} command</b>\n` +
-          ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
-          ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`
-      );
-    }
-  };
+      if (addToGroup && addToGroup.add(msg.chat.id) && alertGroup) {
+        const c = this.handleMessage(msg).commandBase;
+        this.sendToGroup(
+          alertGroup,
+          `<b>A new user have used the /${c} command</b>\n` +
+            ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
+            ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`
+        );
+      }
+    };
 
   private defaultCommandGroups = (): CommandCallback => msg => {
     const group = this.groups[Number(this.handleMessage(msg).arguments[0])];

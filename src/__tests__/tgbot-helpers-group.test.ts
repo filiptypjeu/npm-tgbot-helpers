@@ -51,7 +51,6 @@ describe("add and toggle", () => {
   });
 });
 
-
 describe("check membership", () => {
   const A = new Group("a", ls);
   const B = new Group("b", ls);

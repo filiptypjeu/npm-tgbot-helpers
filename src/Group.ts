@@ -12,7 +12,7 @@ export class Group {
 
   private setMembers(members: string[]) {
     this.variable.set(members, this.domain);
-  };
+  }
 
   /**
    * Get a list of all current members of this group.
@@ -26,14 +26,14 @@ export class Group {
    */
   public isMember(chatId: ChatID): boolean {
     return this.members.includes(chatId.toString());
-  };
+  }
 
   /**
    * A static helper method for checking if a chat/user is part of a single Group or a set of Groups.
    */
   public static isMember(groups: Group | Group[], chatId: ChatID): boolean {
     return (Array.isArray(groups) ? groups : [groups]).reduce<boolean>((res, g) => res || g.isMember(chatId), false);
-  };
+  }
 
   /**
    * Remove all members of this group.
@@ -41,7 +41,7 @@ export class Group {
   public clear(): Group {
     this.variable.clear(this.domain);
     return this;
-  };
+  }
 
   /**
    * Add a chat/user to this group.
