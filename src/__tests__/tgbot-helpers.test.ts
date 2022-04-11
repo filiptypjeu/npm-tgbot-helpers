@@ -9,9 +9,6 @@ jest.mock("node-telegram-bot-api", () => {
   return jest.fn().mockImplementation(() => {
     return {
       TelegramBot: jest.fn(),
-      getMe: (): Promise<TelegramBot.User> => {
-        return new Promise(resolve => resolve({ username: "botname" } as TelegramBot.User));
-      },
       getChat: jest.fn(),
       sendMessage: sendMessageMock,
       onText: jest.fn(),
@@ -33,6 +30,7 @@ afterAll(() => ls.clear());
 
 const wrapper = new TGBotWrapper({
   telegramBot: new TelegramBot("token"),
+  username: "MyBot",
   localStorage: ls,
   sudoGroup,
   defaultCommands: {
@@ -63,10 +61,6 @@ test("commands and commandsByGroup", () => {
   const c = wrapper.commandsByGroup();
   expect(c.get(undefined)).toHaveLength(3);
   expect(c.get(sudoGroup)).toHaveLength(2);
-});
-
-test("username", async () => {
-  expect((await wrapper.thisUser).username).toEqual("botname");
 });
 
 test("handleMessage", () => {
@@ -196,8 +190,8 @@ describe("send messages", () => {
   });
 });
 
-test("groupToUserInfo", () => {
-  expect(wrapper.groupToUserInfo(group)).rejects.toThrowError();
+test("groupToChatInfos", () => {
+  expect(wrapper.groupToChatInfos(group)).rejects.toThrowError();
 
   expect(wrapper.bot.getChat).toHaveBeenCalledWith("11111");
   expect(wrapper.bot.getChat).toHaveBeenCalledWith("22222");

@@ -13,6 +13,8 @@ momentDurationFormatSetup(moment as any);
  * @todo
  * - Add command for getting user info: name, id, groups etc.
  * - Add default log command
+ * - Follow log
+ * - Add ban command
  */
 
 export interface ILogger {
@@ -170,7 +172,7 @@ export class TGBotWrapper {
           group: group.sendRequestTo,
           matchBeginningOnly: true,
           description: group.toggleDescription,
-          callback: this.defaultCommandToggle(group.group, group.responseWhenAdded),
+          callback: this.defaultCommandToggle(group.toggleCommand, group.group, group.responseWhenAdded),
         });
       }
     }
@@ -450,8 +452,12 @@ export class TGBotWrapper {
     return info;
   }
 
-  public async groupToUserInfo(group: Group) {
-    const chats = await Promise.all(group.members.map(chat_id => this.bot.getChat(chat_id)));
+  public async groupToChats(group: Group): Promise<TelegramBot.Chat[]> {
+    return Promise.all(group.members.map(chat_id => this.bot.getChat(chat_id)));
+  }
+
+  public async groupToChatInfos(group: Group): Promise<string[]> {
+    const chats = await this.groupToChats(group);
     return chats.map(c => this.chatInfo(c, true, true));
   }
 
@@ -869,9 +875,9 @@ export class TGBotWrapper {
   private defaultCommandRequest =
     (requestFor: Group, sendRequestTo: Group, response: string | undefined, toggleCommand: Command): CommandCallback =>
     msg => {
-      if (response) {
-        this.sendTo(msg.chat.id, response);
-      }
+      const id = msg.chat.id;
+      if (response) this.sendTo(id, response);
+      if (requestFor.isMember(id)) return;
       this.sendToGroup(
         sendRequestTo,
         `<b>Request for group <i>${requestFor}</i>:</b>\n` +
@@ -890,13 +896,12 @@ export class TGBotWrapper {
    *
    * @returns A callback method for a command.
    */
-  private defaultCommandToggle =
-    (requestFor: Group, responseToNewMember?: string): CommandCallback =>
-    msg => {
+  private defaultCommandToggle = (command: Command, requestFor: Group, responseToNewMember?: string): CommandCallback => async msg => {
       const info = this.handleMessage(msg);
       const userId = this.decommandify(info.commandSuffix || "");
       if (!userId) {
-        this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>.`);
+        const chats = await this.groupToChats(requestFor);
+        this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>. Current users in group:\n${chats.map(c => ` - ${this.chatInfo(c, true, true)} /${command}_${c.id}`) .join("\n")}`);
         return;
       }
 
@@ -938,7 +943,7 @@ export class TGBotWrapper {
     const group = this.groups[Number(this.handleMessage(msg).arguments[0])];
 
     if (group) {
-      this.groupToUserInfo(group)
+      this.groupToChatInfos(group)
         .then(a => {
           const message =
             a.length === 0
