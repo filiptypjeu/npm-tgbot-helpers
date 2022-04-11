@@ -14,7 +14,7 @@ momentDurationFormatSetup(moment as any);
  * - Add command for getting user info: name, id, groups etc.
  * - Add default log command
  * - Follow log
- * - Add ban command
+ * - Add toggle/request setup to Group?
  */
 
 export interface ILogger {
@@ -25,22 +25,26 @@ export interface ILogger {
 export interface IGroup {
   // The group
   group: Group;
-  // The command for requesting access to the group
-  requestCommand: Command;
-  // The immediate response given to a request
-  requestResponse?: string;
-  // If only private chats can request access or not
-  requestPrivateOnly?: boolean;
-  // Description of the request command
-  requestDescription?: string;
-  // The group to send the request to
-  sendRequestTo: Group;
-  // The command used to toggle chat membership in this group
-  toggleCommand: Command;
-  // Description of the toggle command
-  toggleDescription?: string;
-  // The response to the user when added to the group
-  responseWhenAdded?: string;
+  request?: {
+    // The command for requesting access to the group
+    command: Command;
+    // The immediate response given to a request
+    response?: string;
+    // If only private chats can request access or not
+    privateOnly?: boolean;
+    // Description of the request command
+    description?: string;
+    // The group to send the request to
+    sendTo: Group;
+  },
+  toggle: {
+    // The command used to toggle chat membership in this group
+    command: Command;
+    // Description of the toggle command
+    description?: string;
+    // The response to the user when added to the group
+    responseWhenAdded?: string;
+  }
 }
 
 export interface ITGBotWrapperOptions {
@@ -67,6 +71,7 @@ export interface ITGBotWrapperOptions {
       addToGroup?: Group;
       description?: string;
     };
+    banToggle?: Command;
   };
   groups?: (Group | IGroup)[];
   sudoGroup: Group;
@@ -119,6 +124,7 @@ export class TGBotWrapper {
   public readonly startTime: Date;
   public readonly deactivatedCommands: Group;
   private readonly sudoGroup: Group;
+  private readonly bannedUsers: Group;
 
   public commandLogger: ILogger | undefined;
   public botLogger: ILogger | undefined;
@@ -141,6 +147,7 @@ export class TGBotWrapper {
     this.sudoEchoVar = new BooleanVariable("sudoEcho", false, this.ls);
     this.sudoLogVar = new BooleanVariable("sudoLog", false, this.ls);
     this.deactivatedCommands = new Group("deactivatedCommands", this.ls);
+    this.bannedUsers = new Group("banned", this.ls);
 
     this.sudoGroup = o.sudoGroup;
     this.commandLogger = o.commandLogger;
@@ -152,27 +159,37 @@ export class TGBotWrapper {
     this.defaultPrivateOnlyMessage = o.defaultPrivateOnlyMessage || "The command can only be used in a private chat.";
 
     // Add all groups
-    for (const group of o.groups || []) {
+    const groups = (o.groups || []).concat(o.defaultCommands?.banToggle ? [{
+      group: this.bannedUsers,
+      toggle: {
+        command: o.defaultCommands.banToggle,
+        description: "Ban users.",
+      },
+    }] : []);
+    for (const group of groups || []) {
       if (group instanceof Group) {
         this._addGroup(group);
       } else {
         this._addGroup(group.group);
 
+        const r = group.request;
+        const t = group.toggle;
+
         // Add request and group toggle commands
-        this._addCommand({
-          command: group.requestCommand,
-          chatAcion: group.requestResponse ? "typing" : undefined,
-          privateOnly: group.requestPrivateOnly,
-          description: group.requestDescription,
-          callback: this.defaultCommandRequest(group.group, group.sendRequestTo, group.requestResponse, group.toggleCommand),
+        if (r) this._addCommand({
+          command: r.command,
+          chatAcion: r.response ? "typing" : undefined,
+          privateOnly: r.privateOnly,
+          description: r.description,
+          callback: this.defaultCommandRequest(group.group, r.sendTo, r.response, t.command),
         });
         this._addCommand({
-          command: group.toggleCommand,
+          command: t.command,
           chatAcion: "typing",
-          group: group.sendRequestTo,
+          group: r?.sendTo || this.sudoGroup,
           matchBeginningOnly: true,
-          description: group.toggleDescription,
-          callback: this.defaultCommandToggle(group.toggleCommand, group.group, group.responseWhenAdded),
+          description: t.description,
+          callback: this.defaultCommandToggle(t.command, group.group, t.responseWhenAdded),
         });
       }
     }
@@ -337,6 +354,10 @@ export class TGBotWrapper {
     } else if (c.privateOnly && msg.chat.type !== "private") {
       this.sendTo(msg.chat.id, this.defaultPrivateOnlyMessage);
       log = "private";
+
+      // Check if user is banned
+    } else if (this.bannedUsers.isMember(msg.chat.id)) {
+      log = "banned";
     }
 
     // Log the command
