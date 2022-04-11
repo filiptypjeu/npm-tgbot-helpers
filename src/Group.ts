@@ -14,6 +14,10 @@ export class Group {
     this.variable.set(members, this.domain);
   }
 
+  public toString(): string {
+    return this.name;
+  }
+
   /**
    * Get a list of all current members of this group.
    */

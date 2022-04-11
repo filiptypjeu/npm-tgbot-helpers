@@ -358,7 +358,7 @@ export class TGBotWrapper {
 
   private _addGroup(group: Group): void {
     if (this.groups.find(g => g.name === group.name)) {
-      throw new Error(`Duplicate group "${group.name}"`);
+      throw new Error(`Duplicate group "${group}"`);
     }
 
     this.groups.push(group);
@@ -790,7 +790,7 @@ export class TGBotWrapper {
         if (emptyResponse) this.sendTo(msg.chat.id, emptyResponse);
       } else {
         this.sendToGroup(group, messageFormatter(msg) || text);
-        this.sendTo(msg.chat.id, successResponse || `Message sent to group <i>${group.name}</i>!`);
+        this.sendTo(msg.chat.id, successResponse || `Message sent to group <i>${group}</i>!`);
       }
     };
 
@@ -941,8 +941,8 @@ export class TGBotWrapper {
         .then(a => {
           const message =
             a.length === 0
-              ? `No chats in group <i>${group.name}</i>.`
-              : `<b>Chats in group <i>${group.name}</i></b>:\n${a.map(s => ` - ${s}`).join("\n")}`;
+              ? `No chats in group <i>${group}</i>.`
+              : `<b>Chats in group <i>${group}</i></b>:\n${a.map(s => ` - ${s}`).join("\n")}`;
           this.sendTo(msg.chat.id, message);
         })
         .catch(e => this.sendError(e));
