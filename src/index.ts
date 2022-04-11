@@ -183,7 +183,7 @@ export class TGBotWrapper {
         group: o.sudoGroup,
         chatAcion: "typing",
         description: "Deactivates or reactivates a given command.",
-        callback: this.defaultCommandDeactivate,
+        callback: this.defaultCommandDeactivate(),
       });
     }
 
@@ -191,7 +191,7 @@ export class TGBotWrapper {
       this._addCommand({
         command: o.defaultCommands.help,
         chatAcion: "typing",
-        callback: this.defaultCommandHelp,
+        callback: this.defaultCommandHelp(),
       });
     }
 
@@ -221,7 +221,7 @@ export class TGBotWrapper {
         group: o.sudoGroup,
         chatAcion: "typing",
         description: "Get the bot and system uptime.",
-        callback: this.defaultCommandUptime,
+        callback: this.defaultCommandUptime(),
       });
     }
 
@@ -231,7 +231,7 @@ export class TGBotWrapper {
         group: o.sudoGroup,
         chatAcion: "typing",
         description: "Get the IP of the system.",
-        callback: this.defaultCommandIP,
+        callback: this.defaultCommandIP(),
       });
     }
 
@@ -242,7 +242,7 @@ export class TGBotWrapper {
         group: c.availableFor,
         chatAcion: "typing",
         description: c.description,
-        callback: this.defaultCommandCommands,
+        callback: this.defaultCommandCommands(),
       });
     }
 
