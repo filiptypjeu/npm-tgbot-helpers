@@ -43,6 +43,7 @@ export interface IGroup {
 
 export interface ITGBotWrapperOptions {
   telegramBot: TelegramBot;
+  username: string;
   localStorage: ILocalStorage;
   variables?: Variable<any>[];
   defaultCommands?: {
@@ -105,7 +106,7 @@ export class TGBotWrapper {
   public readonly bot: TelegramBot;
   private readonly ls: ILocalStorage;
 
-  public readonly thisUser: Promise<TelegramBot.User>;
+  public readonly username: string;
   public readonly commands: ICommand[] = [];
   public readonly groups: Group[] = [];
 
@@ -130,8 +131,8 @@ export class TGBotWrapper {
     if (!this.bot.isPolling()) {
       this.bot.startPolling();
     }
-    this.thisUser = this.bot.getMe();
 
+    this.username = o.username;
     this.startTime = new Date();
     this.ls = o.localStorage;
 
@@ -301,7 +302,7 @@ export class TGBotWrapper {
     this.onInit();
   }
 
-  public async addCustomCommands(commands: ICommand[]) {
+  public addCustomCommands(commands: ICommand[]) {
     for (const c of commands) {
       this._addCommand(c);
     }
@@ -310,7 +311,7 @@ export class TGBotWrapper {
   }
 
   private async onInit() {
-    const username = (await this.thisUser).username || "UNKNWON_BOT";
+    const username = this.username || "UNKNWON_BOT";
 
     const msg = `${username} initialized with ${this.commands.length} commands, ${this.groups.length} groups and ${this.variables.length} variables.`;
     this.botLogger?.info(msg);
@@ -342,12 +343,12 @@ export class TGBotWrapper {
     return log === "ok";
   }
 
-  private async _addCommand(command: ICommand) {
+  private _addCommand(command: ICommand) {
     if (this.commands.find(c => c.command === command.command)) {
       throw new Error(`Duplicate command "${command.command}"`);
     }
 
-    this.bot.onText(this.commandRegExp(command, (await this.thisUser).username), msg => {
+    this.bot.onText(this.commandRegExp(command, this.username), msg => {
       if (!this.canRunCommand(msg, command)) return;
       if (command.chatAcion) this.bot.sendChatAction(msg.chat.id, command.chatAcion);
       return command.callback(msg);
