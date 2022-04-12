@@ -42,6 +42,7 @@
     "homepage": "https://github.com/filiptypjeu/npm-tgbot-helpers",
     "dependencies": {
         "@types/node-telegram-bot-api": "^0.53.3",
+        "fs": "^0.0.1-security",
         "moment": "^2.29.1",
         "moment-duration-format": "^2.3.2",
         "node-telegram-bot-api": "^0.56.0",

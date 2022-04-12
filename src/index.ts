@@ -7,6 +7,7 @@ import momentDurationFormatSetup from "moment-duration-format";
 import { Group } from "./Group";
 export * from "./Group";
 import { BooleanVariable, ILocalStorage, Variable } from "persistance";
+import { readdirSync } from "fs";
 momentDurationFormatSetup(moment as any);
 
 /**
@@ -55,7 +56,6 @@ export interface ITGBotWrapperOptions {
   defaultCommands?: {
     init?: Command;
     uptime?: Command;
-    userInfo?: Command;
     deactivate?: Command;
     help?: Command;
     ip?: Command;
@@ -72,6 +72,10 @@ export interface ITGBotWrapperOptions {
       description?: string;
     };
     banToggle?: Command;
+    logs?: {
+      command: Command,
+      path: string | string[],
+    }
   };
   groups?: (Group | IGroup)[];
   sudoGroup: Group;
@@ -287,12 +291,14 @@ export class TGBotWrapper {
       });
     }
 
-    if (o.defaultCommands?.userInfo) {
+    if (o.defaultCommands?.logs) {
+      const c = o.defaultCommands.logs;
       this._addCommand({
-        command: o.defaultCommands.userInfo,
+        command: c.command,
         group: o.sudoGroup,
+        privateOnly: true,
         chatAcion: "typing",
-        callback: this.defaultCommandUptime,
+        callback: this.defaultCommandLogs(c.path),
       });
     }
 
@@ -822,19 +828,38 @@ export class TGBotWrapper {
       }
     };
 
+  private defaultCommandLogs =
+    (path: string | string[]): CommandCallback =>
+    async msg => {
+      const files = [path].flat().flatMap(p => readdirSync(p).map(f => `${p}/${f}`));
+      if (!files.length) {
+        this.sendTo(msg.chat.id, "No log files found.");
+        return;
+      }
+
+      const args = this.handleMessage(msg).arguments;
+      const fileName = files[Number(args[0])];
+      if (fileName) {
+        readLastLines
+          .read(fileName, Number(args[1]) || 10)
+          .then(s => this.sendTo(msg.chat.id, s ? `<b>${fileName}</b>\n${s}` : `File ${fileName} is empty.`))
+          .catch(e => this.sendError(e));
+        return;
+      }
+
+      this.sendTo(msg.chat.id, `<b>Available logs</b>\n${files.map((f, i) => `  ${i+1} <i>${f}</i>`).join("\n")}`);
+    };
+
   /**
    * Creates a callback method for a command that reads the last lines from a certain file and sends them to the chat. The amount of lines can be given as an argument when using the command.
-   *
-   * @param logPath The path to the file to read from.
-   * @param keys Optional string to use as a header.
    */
   private defaultCommandLog =
-    (logPath: string, keys?: string): CommandCallback =>
+    (logPath: string): CommandCallback =>
     msg => {
       const n = Number(this.handleMessage(msg).arguments[0]);
       readLastLines
-        .read(logPath, n)
-        .then(s => this.sendTo(msg.chat.id, s ? (keys ? `<b>${keys}</b>\n${s}` : s) : `File ${logPath} is empty.`))
+        .read(logPath, n || 10)
+        .then(s => this.sendTo(msg.chat.id, s ? `<b>${logPath}</b>\n${s}` : `File ${logPath} is empty.`))
         .catch(e => this.sendError(e));
     };
 
@@ -992,6 +1017,7 @@ export class TGBotWrapper {
     sendTo: this.defaultCommandSendTo,
     sendToGroup: this.defaultCommandSendToGroup,
     log: this.defaultCommandLog,
+    logs: this.defaultCommandLogs,
     init: this.defaultCommandInit,
     deactivate: this.defaultCommandDeactivate,
     request: this.defaultCommandRequest,
