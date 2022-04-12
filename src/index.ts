@@ -830,14 +830,14 @@ export class TGBotWrapper {
   private defaultCommandLogs =
     (path: string | string[]): CommandCallback =>
     async msg => {
-      const files = [path].flat().flatMap(p => readdirSync(p).map(f => `${p}/${f}`));
+      const files = [path].flat().flatMap(p => readdirSync(p).filter(f => !f.startsWith(".")).map(f => `${p}/${f}`));
       if (!files.length) {
         this.sendTo(msg.chat.id, "No log files found.");
         return;
       }
 
       const args = this.handleMessage(msg).arguments;
-      const fileName = files[Number(args[0])];
+      const fileName = files[Number(args[0]) - 1];
       if (fileName) {
         readLastLines
           .read(fileName, Number(args[1]) || 10)
