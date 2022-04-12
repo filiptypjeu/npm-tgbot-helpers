@@ -36,7 +36,7 @@ export interface IGroup {
     description?: string;
     // The group to send the request to
     sendTo: Group;
-  },
+  };
   toggle: {
     // The command used to toggle chat membership in this group
     command: Command;
@@ -44,7 +44,7 @@ export interface IGroup {
     description?: string;
     // The response to the user when added to the group
     responseWhenAdded?: string;
-  }
+  };
 }
 
 export interface ITGBotWrapperOptions {
@@ -72,9 +72,9 @@ export interface ITGBotWrapperOptions {
     };
     banToggle?: Command;
     logs?: {
-      command: Command,
-      path: string | string[],
-    }
+      command: Command;
+      path: string | string[];
+    };
   };
   groups?: (Group | IGroup)[];
   sudoGroup: Group;
@@ -162,13 +162,19 @@ export class TGBotWrapper {
     this.defaultPrivateOnlyMessage = o.defaultPrivateOnlyMessage || "The command can only be used in a private chat.";
 
     // Add all groups
-    const groups = (o.groups || []).concat(o.defaultCommands?.banToggle ? [{
-      group: this.bannedUsers,
-      toggle: {
-        command: o.defaultCommands.banToggle,
-        description: "Ban users.",
-      },
-    }] : []);
+    const groups = (o.groups || []).concat(
+      o.defaultCommands?.banToggle
+        ? [
+            {
+              group: this.bannedUsers,
+              toggle: {
+                command: o.defaultCommands.banToggle,
+                description: "Ban users.",
+              },
+            },
+          ]
+        : []
+    );
     for (const group of groups || []) {
       if (group instanceof Group) {
         this._addGroup(group);
@@ -179,13 +185,14 @@ export class TGBotWrapper {
         const t = group.toggle;
 
         // Add request and group toggle commands
-        if (r) this._addCommand({
-          command: r.command,
-          chatAcion: r.response ? "typing" : undefined,
-          privateOnly: r.privateOnly,
-          description: r.description,
-          callback: this.defaultCommandRequest(group.group, r.sendTo, r.response, t.command),
-        });
+        if (r)
+          this._addCommand({
+            command: r.command,
+            chatAcion: r.response ? "typing" : undefined,
+            privateOnly: r.privateOnly,
+            description: r.description,
+            callback: this.defaultCommandRequest(group.group, r.sendTo, r.response, t.command),
+          });
         this._addCommand({
           command: t.command,
           chatAcion: "typing",
@@ -830,7 +837,11 @@ export class TGBotWrapper {
   private defaultCommandLogs =
     (path: string | string[]): CommandCallback =>
     async msg => {
-      const files = [path].flat().flatMap(p => readdirSync(p).filter(f => !f.startsWith(".")).map(f => `${p}/${f}`));
+      const files = [path].flat().flatMap(p =>
+        readdirSync(p)
+          .filter(f => !f.startsWith("."))
+          .map(f => `${p}/${f}`)
+      );
       if (!files.length) {
         this.sendTo(msg.chat.id, "No log files found.");
         return;
@@ -846,7 +857,7 @@ export class TGBotWrapper {
         return;
       }
 
-      this.sendTo(msg.chat.id, `<b>Available logs</b>\n${files.map((f, i) => `  ${i+1} <i>${f}</i>`).join("\n")}`);
+      this.sendTo(msg.chat.id, `<b>Available logs</b>\n${files.map((f, i) => `  ${i + 1} <i>${f}</i>`).join("\n")}`);
     };
 
   /**
@@ -941,12 +952,19 @@ export class TGBotWrapper {
    *
    * @returns A callback method for a command.
    */
-  private defaultCommandToggle = (command: Command, requestFor: Group, responseToNewMember?: string): CommandCallback => async msg => {
+  private defaultCommandToggle =
+    (command: Command, requestFor: Group, responseToNewMember?: string): CommandCallback =>
+    async msg => {
       const info = this.handleMessage(msg);
       const userId = this.decommandify(info.commandSuffix || "");
       if (!userId) {
         const chats = await this.groupToChats(requestFor);
-        this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>. Current users in group:\n${chats.map(c => ` - ${this.chatInfo(c, true, true)} /${command}_${c.id}`) .join("\n")}`);
+        this.sendTo(
+          msg.chat.id,
+          `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>. Current users in group:\n${chats
+            .map(c => ` - ${this.chatInfo(c, true, true)} /${command}_${c.id}`)
+            .join("\n")}`
+        );
         return;
       }
 
