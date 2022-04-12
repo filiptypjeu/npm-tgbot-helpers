@@ -13,7 +13,6 @@ momentDurationFormatSetup(moment as any);
 /**
  * @todo
  * - Add command for getting user info: name, id, groups etc.
- * - Add default log command
  * - Follow log
  * - Add toggle/request setup to Group?
  */
