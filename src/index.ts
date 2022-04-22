@@ -751,22 +751,20 @@ export class TGBotWrapper {
       return this.sendTo(msg.chat.id, `Variable ${args[0]} does not exist.`);
     }
 
+    const value = args[1];
+
+    // Do nothing if a value is not provided
+    if (!value) {
+
     // Reset variable value
-    if (args[1] === "#" || args[1].toLowerCase() === "default") {
+    } else if (value === "#" || value.toLowerCase() === "default") {
       v.clear();
 
-      // Set variable
+    // Set variable
     } else {
       // The value should be interpreted as everything past the first argument, not only the second argument
-      const value = info.text!.slice(args[0].length).trim();
-
-      if (value) {
-        try {
-          v.set(value);
-        } catch (e) {
-          return this.sendTo(msg.chat.id, `Could not set value JSON.parse(${value})`);
-        }
-      }
+      const str = info.text?.slice(args[0].length).trim();
+      if (str) v.setWithString(str);
     }
 
     // Get variable
