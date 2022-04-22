@@ -755,12 +755,11 @@ export class TGBotWrapper {
 
     // Do nothing if a value is not provided
     if (!value) {
-
-    // Reset variable value
+      // Reset variable value
     } else if (value === "#" || value.toLowerCase() === "default") {
       v.clear();
 
-    // Set variable
+      // Set variable
     } else {
       // The value should be interpreted as everything past the first argument, not only the second argument
       const str = info.text?.slice(args[0].length).trim();
