@@ -358,7 +358,7 @@ export class TGBotWrapper {
 
     // Check if user is in the correct group
     if (c.group && !Group.isMember(c.group, msg.chat.id)) {
-      message = hidden ? (c.accessDeniedMessage || "") : (c.accessDeniedMessage || this.defaultAccessDeniedMessage);
+      message = hidden ? c.accessDeniedMessage || "" : c.accessDeniedMessage || this.defaultAccessDeniedMessage;
       log = "denied";
 
       // Check if the command is deactivated
