@@ -351,20 +351,24 @@ export class TGBotWrapper {
 
   private canRunCommand(msg: TelegramBot.Message, c: ICommand): boolean {
     let log = "ok";
+    let message = "";
+    const hidden = c.hide || false;
 
-    // Check if the command is deactivated
+    // Do not give away the existence of hidden commands
+
+    // Check if user is in the correct group
     if (c.group && !Group.isMember(c.group, msg.chat.id)) {
-      this.sendTo(msg.chat.id, c.accessDeniedMessage || this.defaultAccessDeniedMessage);
+      message = hidden ? (c.accessDeniedMessage || "") : (c.accessDeniedMessage || this.defaultAccessDeniedMessage);
       log = "denied";
 
       // Check if the command is deactivated
     } else if (!this.sudoGroup.isMember(msg.chat.id) && this.deactivatedCommands.isMember(`/${c}`)) {
-      this.sendTo(msg.chat.id, this.defaultCommandDeactivatedMessage);
+      if (!hidden) message = this.defaultCommandDeactivatedMessage;
       log = "deactivated";
 
       // Check if the command has to be used in a private chat
     } else if (c.privateOnly && msg.chat.type !== "private") {
-      this.sendTo(msg.chat.id, this.defaultPrivateOnlyMessage);
+      if (!hidden) message = this.defaultPrivateOnlyMessage;
       log = "private";
 
       // Check if user is banned
@@ -372,8 +376,9 @@ export class TGBotWrapper {
       log = "banned";
     }
 
-    // Log the command
+    // Log the command and send message to the user
     this.commandLogger?.info(`${this.chatInfo(msg.from!)} : /${c.command} [${log}]`);
+    if (message) this.sendTo(msg.chat.id, message);
 
     return log === "ok";
   }
