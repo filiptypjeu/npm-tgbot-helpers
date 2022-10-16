@@ -1,4 +1,5 @@
 import { ILocalStorage, Variable } from "persistance";
+import { IRequestCommand, IToggleCommand } from ".";
 
 type ChatID = string | number;
 
@@ -6,8 +7,13 @@ export class Group {
   public readonly variable: Variable<string[]>;
   private readonly domain = "__GROUPS__";
 
-  constructor(public readonly name: string, public readonly ls: ILocalStorage) {
-    this.variable = new Variable<string[]>(`${this.name}`, [], this.ls);
+  constructor(
+    public readonly name: string,
+    ls: ILocalStorage,
+    public toggleCommand?: IToggleCommand,
+    public requestCommand?: IRequestCommand
+  ) {
+    this.variable = new Variable<string[]>(`${this.name}`, [], ls);
   }
 
   private setMembers(members: string[]) {

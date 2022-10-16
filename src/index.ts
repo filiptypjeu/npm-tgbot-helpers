@@ -22,31 +22,6 @@ export interface ILogger {
   error: (message: any) => void;
 }
 
-export interface IGroup {
-  // The group
-  group: Group;
-  request?: {
-    // The command for requesting access to the group
-    command: Command;
-    // The immediate response given to a request
-    response?: string;
-    // If only private chats can request access or not
-    privateOnly?: boolean;
-    // Description of the request command
-    description?: string;
-    // The group to send the request to
-    sendTo: Group;
-  };
-  toggle: {
-    // The command used to toggle chat membership in this group
-    command: Command;
-    // Description of the toggle command
-    description?: string;
-    // The response to the user when added to the group
-    responseWhenAdded?: string;
-  };
-}
-
 export interface ITGBotWrapperOptions {
   telegramBot: TelegramBot;
   username: string;
@@ -76,7 +51,7 @@ export interface ITGBotWrapperOptions {
       path: string | string[];
     };
   };
-  groups?: (Group | IGroup)[];
+  groups?: Group[];
   sudoGroup: Group;
   commandLogger?: ILogger;
   botLogger?: ILogger;
@@ -97,6 +72,28 @@ export interface ICommand {
   chatAcion?: TelegramBot.ChatAction;
   accessDeniedMessage?: string;
   callback: (msg: TelegramBot.Message) => void;
+}
+
+export interface IToggleCommand {
+  // The command used to toggle chat membership in this group
+  command: Command;
+  // Description of the toggle command
+  description?: string;
+  // The response to the user when added to the group
+  responseWhenAdded?: string;
+}
+
+export interface IRequestCommand {
+  // The command for requesting access to the group
+  command: Command;
+  // The immediate response given to a request
+  response?: string;
+  // If only private chats can request access or not
+  privateOnly?: boolean;
+  // Description of the request command
+  description?: string;
+  // The group to send the request to
+  sendTo: Group;
 }
 
 export interface IMessageInfo {
@@ -150,7 +147,11 @@ export class TGBotWrapper {
     this.sudoEchoVar = new BooleanVariable("sudoEcho", false, this.ls);
     this.sudoLogVar = new BooleanVariable("sudoLog", false, this.ls);
     this.deactivatedCommands = new Group("deactivatedCommands", this.ls);
-    this.bannedUsers = new Group("banned", this.ls);
+    this.bannedUsers = new Group(
+      "banned",
+      this.ls,
+      o.defaultCommands?.banToggle ? { command: o.defaultCommands.banToggle, description: "Ban users." } : undefined
+    );
 
     this.sudoGroup = o.sudoGroup;
     this.commandLogger = o.commandLogger;
@@ -162,46 +163,33 @@ export class TGBotWrapper {
     this.defaultPrivateOnlyMessage = o.defaultPrivateOnlyMessage || "The command can only be used in a private chat.";
 
     // Add all groups
-    const groups = (o.groups || []).concat(
-      o.defaultCommands?.banToggle
-        ? [
-            {
-              group: this.bannedUsers,
-              toggle: {
-                command: o.defaultCommands.banToggle,
-                description: "Ban users.",
-              },
-            },
-          ]
-        : []
-    );
-    for (const group of groups || []) {
-      if (group instanceof Group) {
-        this._addGroup(group);
-      } else {
-        this._addGroup(group.group);
+    const groups = (o.groups || []).concat([this.bannedUsers]);
 
-        const r = group.request;
-        const t = group.toggle;
+    for (const group of groups) {
+      this._addGroup(group);
 
-        // Add request and group toggle commands
-        if (r)
-          this._addCommand({
-            command: r.command,
-            chatAcion: r.response ? "typing" : undefined,
-            privateOnly: r.privateOnly,
-            description: r.description,
-            callback: this.defaultCommandRequest(group.group, r.sendTo, r.response, t.command),
-          });
+      const r = group.requestCommand;
+      const t = group.toggleCommand;
+
+      // Add request and group toggle commands
+      if (r)
+        this._addCommand({
+          command: r.command,
+          chatAcion: r.response ? "typing" : undefined,
+          privateOnly: r.privateOnly,
+          description: r.description,
+          callback: this.defaultCommandRequest(group, r.sendTo, r.response, t?.command),
+        });
+
+      if (t)
         this._addCommand({
           command: t.command,
           chatAcion: "typing",
           group: r?.sendTo || this.sudoGroup,
           matchBeginningOnly: true,
           description: t.description,
-          callback: this.defaultCommandToggle(t.command, group.group, t.responseWhenAdded),
+          callback: this.defaultCommandToggle(t.command, group, t.responseWhenAdded),
         });
-      }
     }
 
     // Add default commands
@@ -931,19 +919,20 @@ export class TGBotWrapper {
    * @param toggleCommand The command that can be used to grant access to the group in question. The command need to look like "/command_CHATID".
    */
   private defaultCommandRequest =
-    (requestFor: Group, sendRequestTo: Group, response: string | undefined, toggleCommand: Command): CommandCallback =>
+    (requestFor: Group, sendRequestTo: Group, response: string | undefined, toggleCommand?: Command): CommandCallback =>
     msg => {
       const id = msg.chat.id;
       if (response) this.sendTo(id, response);
       if (requestFor.isMember(id)) return;
-      this.sendToGroup(
-        sendRequestTo,
-        `<b>Request for group <i>${requestFor}</i>:</b>\n` +
-          ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
-          ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}\n` +
-          ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>\n` +
-          `Toggle: /${toggleCommand}_${this.commandify(msg.chat.id)}`
-      );
+      const rows = [
+        `<b>Request for group <i>${requestFor}</i>:</b>`,
+        ` - User: ${this.chatInfo(msg.from!, true, true)}`,
+        ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`,
+        ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>`,
+      ];
+      if (toggleCommand) rows.push(`Toggle: /${toggleCommand}_${this.commandify(id)}`);
+
+      this.sendToGroup(sendRequestTo, rows.join("\n"));
     };
 
   /**
@@ -991,16 +980,23 @@ export class TGBotWrapper {
   private defaultCommandStart =
     (response: string, addToGroup?: Group, alertGroup?: Group): CommandCallback =>
     msg => {
-      this.sendTo(msg.chat.id, response);
+      const id = msg.chat.id;
+      this.sendTo(id, response);
 
-      if (addToGroup && addToGroup.add(msg.chat.id) && alertGroup) {
+      if (addToGroup && addToGroup.add(id) && alertGroup) {
         const c = this.handleMessage(msg).commandBase;
-        this.sendToGroup(
-          alertGroup,
-          `<b>A new user have used the /${c} command</b>\n` +
-            ` - User: ${this.chatInfo(msg.from!, true, true)}\n` +
-            ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`
-        );
+        const rows = [
+          `<b>A new user have used the /${c} command</b>`,
+          ` - User: ${this.chatInfo(msg.from!, true, true)}`,
+          ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`,
+        ];
+
+        const groups = this.groups.filter(g => g.toggleCommand?.command);
+        if (groups.length) {
+          rows.push("", "Group toggles:");
+          groups.forEach(g => rows.push(` - <i>${g.name}</i>: /${g.toggleCommand?.command}_${this.commandify(id)}`));
+        }
+        this.sendToGroup(alertGroup, rows.join("\n"));
       }
     };
 
