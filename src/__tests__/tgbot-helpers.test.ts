@@ -39,6 +39,7 @@ const wrapper = new TGBotWrapper({
     },
     var: "var",
     init: "init",
+    chatInfo: "CHAT",
   },
 });
 
@@ -249,6 +250,57 @@ test("chatInfo with group chat", () => {
   c.invite_link = "LINK";
   expect(wrapper.chatInfo(c)).toEqual("TITLE [supergroup]");
   expect(wrapper.chatInfo(c, true, true, true)).toEqual("<b>TITLE</b> [supergroup] <i>LINK</i>");
+});
+
+test("getUserInfo", () => {
+  const u = {
+    first_name: "FIRSTNAME",
+    is_bot: false,
+    id: 1234,
+  } as TelegramBot.User;
+
+  let info = wrapper.getUserInfo(u);
+  expect(info.parsed).toEqual({
+    name: "FIRSTNAME",
+    infoString: "FIRSTNAME",
+  });
+
+  u.username = "USERNAME";
+  info = wrapper.getUserInfo(u);
+  expect(info.parsed).toEqual({
+    name: "FIRSTNAME",
+    username: "@USERNAME",
+    infoString: "FIRSTNAME @USERNAME",
+  });
+
+  u.last_name = "LASTNAME";
+  u.is_bot = true;
+  u.language_code = "en";
+  info = wrapper.getUserInfo(u);
+  expect(info.parsed).toEqual({
+    name: "FIRSTNAME LASTNAME",
+    username: "@USERNAME",
+    infoString: "FIRSTNAME LASTNAME @USERNAME (BOT) [en]",
+  });
+});
+
+test("getChatInfo", () => {
+  const c = {
+    id: 4321,
+    title: "TITLE",
+    first_name: "FIRSTNAME",
+    last_name: "LASTNAME",
+    username: "USERNAME",
+    type: "supergroup",
+  } as TelegramBot.Chat;
+
+  const info = wrapper.getChatInfo(c);
+  expect(info.parsed).toEqual({
+    name: "FIRSTNAME LASTNAME TITLE",
+    username: "@USERNAME",
+    chatInfoCommand: "/CHAT_4321",
+    infoString: "FIRSTNAME LASTNAME TITLE @USERNAME /CHAT_4321",
+  });
 });
 
 test("regexp", () => {

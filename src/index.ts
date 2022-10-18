@@ -22,6 +22,23 @@ export interface ILogger {
   error: (message: any) => void;
 }
 
+export interface TGBotChatInfo extends TelegramBot.Chat {
+  parsed: {
+    name: string;
+    username?: string;
+    chatInfoCommand?: string;
+    infoString: string;
+  }
+}
+
+export interface TGBotUserInfo extends TelegramBot.User {
+  parsed: {
+    name: string;
+    username?: string;
+    infoString: string;
+  }
+}
+
 export interface ITGBotWrapperOptions {
   telegramBot: TelegramBot;
   username: string;
@@ -559,6 +576,36 @@ export class TGBotWrapper {
       .filter(s => s)
       .join(" ")
       .trim();
+  }
+
+  public getChatInfo(chat: TelegramBot.Chat): TGBotChatInfo {
+    const name = `${chat.first_name || ""} ${chat.last_name || ""} ${chat.title || ""}`.trim();
+    const username = chat.username && `@${chat.username}`;
+    const chatInfoCommand = this.chatInfoCommand && `/${this.chatInfoCommand}_${this.commandify(chat.id)}`;
+
+    return {
+      ...chat,
+      parsed: {
+        name,
+        username,
+        chatInfoCommand,
+        infoString: [name, username, chatInfoCommand].filter(s => s).join(" "),
+      },
+    };
+  }
+
+  public getUserInfo(user: TelegramBot.User): TGBotUserInfo {
+    const name = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+    const username = user.username && `@${user.username}`;
+
+    return {
+      ...user,
+      parsed: {
+        name,
+        username,
+        infoString: [name, username, user.is_bot && "(BOT)" , user.language_code && `[${user.language_code}]`].filter(s => s).join(" "),
+      },
+    };
   }
 
   private getSendOptions(
