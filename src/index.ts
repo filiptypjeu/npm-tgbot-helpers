@@ -398,7 +398,17 @@ export class TGBotWrapper {
     }
 
     // Log the command and send message to the user
-    this.commandLogger?.info(`${this.chatInfo(msg.from!)} : /${c.command} [${log}]`);
+    if (this.commandLogger) {
+      const ui = msg.from ? this.getUserInfo(msg.from) : {} as any;
+      const ci = this.getChatInfo(msg.chat);
+      const logmsg = [
+        ui?.parsed.name,
+        ui?.parsed.username,
+        ci.parsed.chatInfoCommand,
+        `: /${c.command} [${log}]`,
+      ];
+      this.commandLogger.info(logmsg.filter(s => s).join(" "));
+    }
     if (message) this.sendTo(msg.chat.id, message);
 
     return log === "ok";
@@ -515,9 +525,9 @@ export class TGBotWrapper {
     return Promise.all(group.members.map(chat_id => this.bot.getChat(chat_id)));
   }
 
-  public async groupToChatInfos(group: Group): Promise<string[]> {
+  public async groupToChatInfos(group: Group): Promise<TGBotChatInfo[]> {
     const chats = await this.groupToChats(group);
-    return chats.map(c => this.chatInfo(c, true, true));
+    return chats.map(c => this.getChatInfo(c));
   }
 
   /**
@@ -536,6 +546,8 @@ export class TGBotWrapper {
    * 1. User => name and username etc.
    * 2. Chat, private => name and username etc.
    * 3. Chat, not private => title and type etc.
+   *
+   * @deprecated, last valid in version tgbot-helpers@4.1.0
    */
   public chatInfo(
     chatOrUser: TelegramBot.Chat | TelegramBot.User,
@@ -989,10 +1001,14 @@ export class TGBotWrapper {
       if (requestFor.isMember(id)) return;
       const rows = [
         `<b>Request for group <i>${requestFor}</i>:</b>`,
-        ` - User: ${this.chatInfo(msg.from!, true, true)}`,
-        ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`,
-        ` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>`,
+        ` - Chat: ${this.getChatInfo(msg.chat).parsed.infoString}`,
       ];
+
+      if (msg.from && msg.from.id !== msg.chat.id) {
+        rows.push(` - User: ${this.getUserInfo(msg.from).parsed.infoString}`);
+      }
+
+      rows.push(` - Is in group: <code>${requestFor.isMember(msg.chat.id)}</code>`);
       if (toggleCommand) rows.push(`Toggle: /${toggleCommand}_${this.commandify(id)}`);
 
       this.sendToGroup(sendRequestTo, rows.join("\n"));
@@ -1015,8 +1031,8 @@ export class TGBotWrapper {
         const chats = await this.groupToChats(requestFor);
         this.sendTo(
           msg.chat.id,
-          `Use ${info.commandBase}_CHATID to toggle CHATID for group <i>${requestFor}</i>. Current users in group:\n${chats
-            .map(c => ` - ${this.chatInfo(c, true, true)} /${command}_${c.id}`)
+          `Use /${command}_CHATID to toggle CHATID for group <i>${requestFor}</i>. Current users in group:\n${chats
+            .map(c => ` - ${this.getChatInfo(c).parsed.infoString}`)
             .join("\n")}`
         );
         return;
@@ -1050,9 +1066,12 @@ export class TGBotWrapper {
         const c = this.handleMessage(msg).commandBase;
         const rows = [
           `<b>A new user have used the /${c} command</b>`,
-          ` - User: ${this.chatInfo(msg.from!, true, true)}`,
-          ` - Chat: ${this.chatInfo(msg.chat, true, true, true)}`,
+          ` - Chat: ${this.getChatInfo(msg.chat).parsed.infoString}`,
         ];
+
+        if (msg.from && msg.from.id !== msg.chat.id) {
+          rows.push(` - User: ${this.getUserInfo(msg.from).parsed.infoString}`);
+        }
 
         const groups = this.groups.filter(g => g.toggleCommand?.command);
         if (groups.length) {
@@ -1072,7 +1091,7 @@ export class TGBotWrapper {
           const message =
             a.length === 0
               ? `No chats in group <i>${group}</i>.`
-              : `<b>Chats in group <i>${group}</i></b>:\n${a.map(s => ` - ${s}`).join("\n")}`;
+              : `<b>Chats in group <i>${group}</i></b>:\n${a.map(s => ` - ${s.parsed.name} ${s.parsed.chatInfoCommand}`).join("\n")}`;
           this.sendTo(msg.chat.id, message);
         })
         .catch(e => this.sendError(e));
@@ -1099,15 +1118,16 @@ export class TGBotWrapper {
       return;
     }
 
-    const chatInfo = this.chatInfo(await this.bot.getChat(chat_id), true, true);
+    const chat = await this.bot.getChat(chat_id);
     const rows = [
-      `<b>User/chat info</b>`,
-      chatInfo,
+      `<b>Chat info</b>`,
+      this.getChatInfo(chat).parsed.infoString,
+      `<code>${JSON.stringify(chat, null, 4)}</code>`,
     ];
 
     const groups = this.groups.filter(g => g.toggleCommand?.command);
     if (groups.length) {
-      rows.push("", "Group toggles:");
+      rows.push("", "<b>Group toggles</b>");
       groups.forEach(g => rows.push(` - <i>${g.name}</i>: /${g.toggleCommand?.command}_${this.commandify(chat_id)}`));
     }
 
