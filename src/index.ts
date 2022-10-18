@@ -73,6 +73,9 @@ export interface ITGBotWrapperOptions {
   sudoGroup: Group;
   commandLogger?: ILogger;
   botLogger?: ILogger;
+  /**
+   * @deprecated, last valid in version tgbot-helpers@4.2.1
+   */
   errorLogger?: ILogger;
   defaultAccessDeniedMessage?: string;
   defaultPrivateOnlyMessage?: string;
@@ -139,7 +142,6 @@ export class TGBotWrapper {
 
   public commandLogger: ILogger | undefined;
   public botLogger: ILogger | undefined;
-  public errorLogger: ILogger | undefined;
 
   public defaultAccessDeniedMessage: string;
   public defaultCommandDeactivatedMessage: string;
@@ -152,6 +154,13 @@ export class TGBotWrapper {
     if (!this.bot.isPolling()) {
       this.bot.startPolling();
     }
+
+    this.commandLogger = o.commandLogger;
+    this.botLogger = o.botLogger;
+
+    this.bot.on("polling_error", e => {
+      this.botLogger?.error(e);
+    });
 
     this.username = o.username;
     this.startTime = new Date();
@@ -167,9 +176,6 @@ export class TGBotWrapper {
     );
 
     this.sudoGroup = o.sudoGroup;
-    this.commandLogger = o.commandLogger;
-    this.botLogger = o.botLogger;
-    this.errorLogger = o.errorLogger;
 
     this.defaultAccessDeniedMessage = o.defaultAccessDeniedMessage || "You dont have access to this command.";
     this.defaultCommandDeactivatedMessage = o.defaultCommandDeactivatedMessage || "This command has been deactivated.";
@@ -655,7 +661,7 @@ export class TGBotWrapper {
     try {
       return await this.bot.sendMessage(chat_id, textToSend, sendOptions);
     } catch (e: any) {
-      if (e.code !== "ETELEGRAM") return this.errorLogger?.error(e);
+      if (e.code !== "ETELEGRAM") return this.botLogger?.error(e);
       if (e.response.body.description !== "Bad Request: message is too long")
         this.sendError(
           `Error code: ${e.code}, msg_length: ${text.length}, ok: ${e.response.body.ok}, error_code: ${e.response.body.error_code}, description: ${e.response.body.description}`
