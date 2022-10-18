@@ -1076,7 +1076,7 @@ export class TGBotWrapper {
           const message =
             a.length === 0
               ? `No chats in group <i>${group}</i>.`
-              : `<b>Chats in group <i>${group}</i></b>:\n${a.map(s => ` - ${s.parsed.name} ${s.parsed.chatInfoCommand}`).join("\n")}`;
+              : `<b>Chats in group <i>${group}</i></b>:\n${a.map(s => ` - ${s.parsed.infoString}`).join("\n")}`;
           this.sendTo(msg.chat.id, message);
         })
         .catch(e => this.sendError(e));
