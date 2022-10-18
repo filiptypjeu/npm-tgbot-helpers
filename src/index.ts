@@ -79,37 +79,30 @@ export interface ITGBotWrapperOptions {
   defaultCommandDeactivatedMessage?: string;
 }
 
-export interface ICommand {
+export interface ICommandBase {
   command: Command;
   regexp?: RegExp;
   group?: Group | Group[];
   privateOnly?: boolean;
-  matchBeginningOnly?: boolean;
   hide?: boolean;
   description?: string;
-  chatAcion?: TelegramBot.ChatAction;
   accessDeniedMessage?: string;
+}
+
+export interface ICommand extends ICommandBase {
+  matchBeginningOnly?: boolean;
+  chatAcion?: TelegramBot.ChatAction;
   callback: (msg: TelegramBot.Message) => void;
 }
 
-export interface IToggleCommand {
-  // The command used to toggle chat membership in this group
-  command: Command;
-  // Description of the toggle command
-  description?: string;
-  // The response to the user when added to the group
+export interface IToggleCommand extends ICommandBase {
+  // The response to the user when finally added to the group
   responseWhenAdded?: string;
 }
 
-export interface IRequestCommand {
-  // The command for requesting access to the group
-  command: Command;
+export interface IRequestCommand extends ICommandBase {
   // The immediate response given to a request
   response?: string;
-  // If only private chats can request access or not
-  privateOnly?: boolean;
-  // Description of the request command
-  description?: string;
   // The group to send the request to
   sendTo: Group;
 }
@@ -170,7 +163,7 @@ export class TGBotWrapper {
     this.bannedUsers = new Group(
       "banned",
       this.ls,
-      o.defaultCommands?.banToggle ? { command: o.defaultCommands.banToggle, description: "Ban users." } : undefined
+      o.defaultCommands?.banToggle ? { command: o.defaultCommands.banToggle, description: "Ban users.", hide: true } : undefined
     );
 
     this.sudoGroup = o.sudoGroup;
@@ -194,20 +187,17 @@ export class TGBotWrapper {
       // Add request and group toggle commands
       if (r)
         this._addCommand({
-          command: r.command,
+          ...r,
           chatAcion: r.response ? "typing" : undefined,
-          privateOnly: r.privateOnly,
-          description: r.description,
           callback: this.defaultCommandRequest(group, r.sendTo, r.response, t?.command),
         });
 
       if (t)
         this._addCommand({
-          command: t.command,
-          chatAcion: "typing",
-          group: r?.sendTo || this.sudoGroup,
+          ...t,
           matchBeginningOnly: true,
-          description: t.description,
+          group: t.group || r?.sendTo || this.sudoGroup,
+          chatAcion: "typing",
           callback: this.defaultCommandToggle(t.command, group, t.responseWhenAdded),
         });
     }
@@ -1024,7 +1014,7 @@ export class TGBotWrapper {
           .then(infos =>
             this.sendTo(
               msg.chat.id,
-              `Use /${command}_CHATID to toggle CHATID for group <i>${requestFor}</i>. Current users in group:\n${infos
+              `Use /${command}_CHATID to toggle CHATID for group <i>${requestFor}</i>\n\n<b>Current chats in group</b>\n${infos.length === 0 ? "  <i>No chats found...</i>" : infos
                 .map(info => ` - ${info.parsed.infoString}`)
                 .join("\n")}`
             )
