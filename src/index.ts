@@ -1104,15 +1104,21 @@ export class TGBotWrapper {
     }
 
     const chat = await this.bot.getChat(chat_id);
-    const rows = [`<b>Chat info</b>`, this.getChatInfo(chat).parsed.infoString, `<code>${JSON.stringify(chat, null, 4)}</code>`];
+    const rows = [
+      `<b>Chat info</b>`,
+      this.getChatInfo(chat).parsed.infoString,
+      `<code>${JSON.stringify(chat, null, 4)}</code>`,
+      "",
+      "<b>Group membership</b>",
+    ];
 
-    const groups = this.groups.filter(g => g.toggleCommand?.command);
-    if (groups.length) {
-      rows.push("", "<b>Group membership</b>");
-      groups.forEach(g =>
-        rows.push(` - <i>${g.name}</i> - <code>${g.isMember(chat_id)}</code> - /${g.toggleCommand?.command}_${this.commandify(chat_id)}`)
-      );
-    }
+    if (this.groups.length)
+      this.groups.forEach(g => {
+        let str = ` - <i>${g.name}</i> - <code>${g.isMember(chat_id)}</code>`;
+        if (g.toggleCommand) str += ` - /${g.toggleCommand?.command}_${this.commandify(chat_id)}`;
+        rows.push(str);
+      });
+    else rows.push("  <i>No groups found...</i>");
 
     return this.sendTo(msg.chat.id, rows.join("\n"));
   };
