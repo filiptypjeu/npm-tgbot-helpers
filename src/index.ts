@@ -1017,8 +1017,9 @@ export class TGBotWrapper {
   /**
    * Create a callback method for a command that adds a certain chat to a group. The command has to be in the form "/<CMD>_<CHATID>", so that the chat ID in question can be retrieved from the command itself.
    *
-   * @param requestFor The group.
-   * @param responseToNewMember The response for the one using the command.
+   * @param command The <CMD> above.
+   * @param requestFor The group in question.
+   * @param responseToNewMember The message to the chat that was added to the group.
    *
    * @returns A callback method for a command.
    */
@@ -1026,27 +1027,30 @@ export class TGBotWrapper {
     (command: Command, requestFor: Group, responseToNewMember?: string): CommandCallback =>
     async msg => {
       const info = this.handleMessage(msg);
-      const userId = this.decommandify(info.commandSuffix || "");
-      if (!userId) {
-        const chats = await this.groupToChats(requestFor);
-        this.sendTo(
-          msg.chat.id,
-          `Use /${command}_CHATID to toggle CHATID for group <i>${requestFor}</i>. Current users in group:\n${chats
-            .map(c => ` - ${this.getChatInfo(c).parsed.infoString}`)
-            .join("\n")}`
-        );
-        return;
+      const chat_id = this.decommandify(info.commandSuffix || "");
+      if (!chat_id) {
+        this.groupToChatInfos(requestFor)
+          .then(infos => this.sendTo(
+            msg.chat.id,
+            `Use /${command}_CHATID to toggle CHATID for group <i>${requestFor}</i>. Current users in group:\n${
+              infos.map(info => ` - ${info.parsed.infoString}`).join("\n")
+            }`
+          ))
+          .catch(e => this.sendError(e));
+          return;
       }
 
-      if (requestFor.toggle(userId)) {
-        this.sendTo(msg.chat.id, `Chat ${userId} has been added to group <i>${requestFor}</i>.`);
+      const id_str = this.chatInfoCommand ? `/${this.chatInfoCommand}_${this.commandify(chat_id)}` : chat_id;
+
+      if (requestFor.toggle(chat_id)) {
+        this.sendTo(msg.chat.id, `Chat ${id_str} has been added to group <i>${requestFor}</i>.`);
         if (responseToNewMember) {
-          this.sendTo(userId, responseToNewMember);
+          this.sendTo(chat_id, responseToNewMember);
         }
         return;
       }
 
-      return this.sendTo(msg.chat.id, `Chat ${userId} has been removed from group <i>${requestFor}</i>.`);
+      return this.sendTo(msg.chat.id, `Chat ${id_str} has been removed from group <i>${requestFor}</i>.`);
     };
 
   /**
@@ -1073,11 +1077,6 @@ export class TGBotWrapper {
           rows.push(` - User: ${this.getUserInfo(msg.from).parsed.infoString}`);
         }
 
-        const groups = this.groups.filter(g => g.toggleCommand?.command);
-        if (groups.length) {
-          rows.push("", "Group toggles:");
-          groups.forEach(g => rows.push(` - <i>${g.name}</i>: /${g.toggleCommand?.command}_${this.commandify(id)}`));
-        }
         this.sendToGroup(alertGroup, rows.join("\n"));
       }
     };
@@ -1127,8 +1126,8 @@ export class TGBotWrapper {
 
     const groups = this.groups.filter(g => g.toggleCommand?.command);
     if (groups.length) {
-      rows.push("", "<b>Group toggles</b>");
-      groups.forEach(g => rows.push(` - <i>${g.name}</i>: /${g.toggleCommand?.command}_${this.commandify(chat_id)}`));
+      rows.push("", "<b>Group membership</b>");
+      groups.forEach(g => rows.push(` - <i>${g.name}</i> - <code>${g.isMember(chat_id)}</code> - /${g.toggleCommand?.command}_${this.commandify(chat_id)}`));
     }
 
     return this.sendTo(msg.chat.id, rows.join("\n"));

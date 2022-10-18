@@ -55,13 +55,16 @@ wrapper.addCustomCommands([
   },
 ]);
 
+const N_COMMANDS = 6;
+const N_SUDOCOMMANDS = 3;
+
 test("commands and commandsByGroup", () => {
-  expect(wrapper.commands).toHaveLength(5);
-  expect(wrapper.bot.onText).toHaveBeenCalledTimes(5);
+  expect(wrapper.commands).toHaveLength(N_COMMANDS);
+  expect(wrapper.bot.onText).toHaveBeenCalledTimes(N_COMMANDS);
 
   const c = wrapper.commandsByGroup();
-  expect(c.get(undefined)).toHaveLength(3);
-  expect(c.get(sudoGroup)).toHaveLength(2);
+  expect(c.get(undefined)).toHaveLength(N_COMMANDS - N_SUDOCOMMANDS);
+  expect(c.get(sudoGroup)).toHaveLength(N_SUDOCOMMANDS);
 });
 
 test("handleMessage", () => {
