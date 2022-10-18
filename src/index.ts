@@ -35,6 +35,7 @@ export interface ITGBotWrapperOptions {
     ip?: Command;
     var?: Command;
     groups?: Command;
+    chatInfo?: Command;
     commands?: {
       command: Command;
       availableFor?: Group;
@@ -133,6 +134,8 @@ export class TGBotWrapper {
   public defaultAccessDeniedMessage: string;
   public defaultCommandDeactivatedMessage: string;
   public defaultPrivateOnlyMessage: string;
+
+  private readonly chatInfoCommand: string | undefined;
 
   constructor(o: ITGBotWrapperOptions) {
     this.bot = o.telegramBot;
@@ -282,6 +285,19 @@ export class TGBotWrapper {
         chatAcion: "typing",
         description: "Gives the members of a specific group.",
         callback: this.defaultCommandGroups(),
+      });
+    }
+
+    if (o.defaultCommands?.chatInfo) {
+      this.chatInfoCommand = o.defaultCommands.chatInfo;
+      this._addCommand({
+        command: o.defaultCommands.chatInfo,
+        group: o.sudoGroup,
+        privateOnly: true,
+        matchBeginningOnly: true,
+        chatAcion: "typing",
+        description: "Gives info about a certain chat that uses the bot.",
+        callback: this.defaultCommandChatInfo(),
       });
     }
 
@@ -1023,6 +1039,34 @@ export class TGBotWrapper {
     }
   };
 
+  /**
+   * Create a callback method for a command that gives the current info about a chat that uses the bot.
+   *
+   * @returns A callback method for a command.
+   */
+  private defaultCommandChatInfo = (): CommandCallback => async msg => {
+    const info = this.handleMessage(msg);
+    const chat_id = this.decommandify(info.commandSuffix || "");
+    if (!chat_id) {
+      this.sendTo(msg.chat.id, `Use ${info.commandBase}_CHATID to see info about a user.`);
+      return;
+    }
+
+    const chatInfo = this.chatInfo(await this.bot.getChat(chat_id), true, true);
+    const rows = [
+      `<b>User/chat info</b>`,
+      chatInfo,
+    ];
+
+    const groups = this.groups.filter(g => g.toggleCommand?.command);
+    if (groups.length) {
+      rows.push("", "Group toggles:");
+      groups.forEach(g => rows.push(` - <i>${g.name}</i>: /${g.toggleCommand?.command}_${this.commandify(chat_id)}`));
+    }
+
+    return this.sendTo(msg.chat.id, rows.join("\n"));
+  };
+
   public defaultCommands = {
     uptime: this.defaultCommandUptime,
     ip: this.defaultCommandIP,
@@ -1039,6 +1083,7 @@ export class TGBotWrapper {
     toggle: this.defaultCommandToggle,
     start: this.defaultCommandStart,
     groups: this.defaultCommandGroups,
+    chatInfo: this.defaultCommandChatInfo,
   };
 }
 
