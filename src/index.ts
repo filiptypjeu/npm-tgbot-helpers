@@ -28,7 +28,7 @@ export interface TGBotChatInfo extends TelegramBot.Chat {
     username?: string;
     chatInfoCommand?: string;
     infoString: string;
-  }
+  };
 }
 
 export interface TGBotUserInfo extends TelegramBot.User {
@@ -36,7 +36,7 @@ export interface TGBotUserInfo extends TelegramBot.User {
     name: string;
     username?: string;
     infoString: string;
-  }
+  };
 }
 
 export interface ITGBotWrapperOptions {
@@ -399,14 +399,9 @@ export class TGBotWrapper {
 
     // Log the command and send message to the user
     if (this.commandLogger) {
-      const ui = msg.from ? this.getUserInfo(msg.from) : {} as any;
+      const ui = msg.from ? this.getUserInfo(msg.from) : ({} as any);
       const ci = this.getChatInfo(msg.chat);
-      const logmsg = [
-        ui?.parsed.name,
-        ui?.parsed.username,
-        ci.parsed.chatInfoCommand,
-        `: /${c.command} [${log}]`,
-      ];
+      const logmsg = [ui?.parsed.name, ui?.parsed.username, ci.parsed.chatInfoCommand, `: /${c.command} [${log}]`];
       this.commandLogger.info(logmsg.filter(s => s).join(" "));
     }
     if (message) this.sendTo(msg.chat.id, message);
@@ -615,7 +610,7 @@ export class TGBotWrapper {
       parsed: {
         name,
         username,
-        infoString: [name, username, user.is_bot && "(BOT)" , user.language_code && `[${user.language_code}]`].filter(s => s).join(" "),
+        infoString: [name, username, user.is_bot && "(BOT)", user.language_code && `[${user.language_code}]`].filter(s => s).join(" "),
       },
     };
   }
@@ -999,10 +994,7 @@ export class TGBotWrapper {
       const id = msg.chat.id;
       if (response) this.sendTo(id, response);
       if (requestFor.isMember(id)) return;
-      const rows = [
-        `<b>Request for group <i>${requestFor}</i>:</b>`,
-        ` - Chat: ${this.getChatInfo(msg.chat).parsed.infoString}`,
-      ];
+      const rows = [`<b>Request for group <i>${requestFor}</i>:</b>`, ` - Chat: ${this.getChatInfo(msg.chat).parsed.infoString}`];
 
       if (msg.from && msg.from.id !== msg.chat.id) {
         rows.push(` - User: ${this.getUserInfo(msg.from).parsed.infoString}`);
@@ -1026,18 +1018,19 @@ export class TGBotWrapper {
   private defaultCommandToggle =
     (command: Command, requestFor: Group, responseToNewMember?: string): CommandCallback =>
     async msg => {
-      const info = this.handleMessage(msg);
-      const chat_id = this.decommandify(info.commandSuffix || "");
+      const chat_id = this.decommandify(this.handleMessage(msg).commandSuffix || "");
       if (!chat_id) {
         this.groupToChatInfos(requestFor)
-          .then(infos => this.sendTo(
-            msg.chat.id,
-            `Use /${command}_CHATID to toggle CHATID for group <i>${requestFor}</i>. Current users in group:\n${
-              infos.map(info => ` - ${info.parsed.infoString}`).join("\n")
-            }`
-          ))
+          .then(infos =>
+            this.sendTo(
+              msg.chat.id,
+              `Use /${command}_CHATID to toggle CHATID for group <i>${requestFor}</i>. Current users in group:\n${infos
+                .map(info => ` - ${info.parsed.infoString}`)
+                .join("\n")}`
+            )
+          )
           .catch(e => this.sendError(e));
-          return;
+        return;
       }
 
       const id_str = this.chatInfoCommand ? `/${this.chatInfoCommand}_${this.commandify(chat_id)}` : chat_id;
@@ -1068,10 +1061,7 @@ export class TGBotWrapper {
 
       if (addToGroup && addToGroup.add(id) && alertGroup) {
         const c = this.handleMessage(msg).commandBase;
-        const rows = [
-          `<b>A new user have used the /${c} command</b>`,
-          ` - Chat: ${this.getChatInfo(msg.chat).parsed.infoString}`,
-        ];
+        const rows = [`<b>A new user have used the /${c} command</b>`, ` - Chat: ${this.getChatInfo(msg.chat).parsed.infoString}`];
 
         if (msg.from && msg.from.id !== msg.chat.id) {
           rows.push(` - User: ${this.getUserInfo(msg.from).parsed.infoString}`);
@@ -1118,16 +1108,14 @@ export class TGBotWrapper {
     }
 
     const chat = await this.bot.getChat(chat_id);
-    const rows = [
-      `<b>Chat info</b>`,
-      this.getChatInfo(chat).parsed.infoString,
-      `<code>${JSON.stringify(chat, null, 4)}</code>`,
-    ];
+    const rows = [`<b>Chat info</b>`, this.getChatInfo(chat).parsed.infoString, `<code>${JSON.stringify(chat, null, 4)}</code>`];
 
     const groups = this.groups.filter(g => g.toggleCommand?.command);
     if (groups.length) {
       rows.push("", "<b>Group membership</b>");
-      groups.forEach(g => rows.push(` - <i>${g.name}</i> - <code>${g.isMember(chat_id)}</code> - /${g.toggleCommand?.command}_${this.commandify(chat_id)}`));
+      groups.forEach(g =>
+        rows.push(` - <i>${g.name}</i> - <code>${g.isMember(chat_id)}</code> - /${g.toggleCommand?.command}_${this.commandify(chat_id)}`)
+      );
     }
 
     return this.sendTo(msg.chat.id, rows.join("\n"));
