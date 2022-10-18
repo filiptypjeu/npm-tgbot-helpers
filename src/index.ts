@@ -1014,9 +1014,9 @@ export class TGBotWrapper {
           .then(infos =>
             this.sendTo(
               msg.chat.id,
-              `Use /${command}_CHATID to toggle CHATID for group <i>${requestFor}</i>\n\n<b>Current chats in group</b>\n${infos.length === 0 ? "  <i>No chats found...</i>" : infos
-                .map(info => ` - ${info.parsed.infoString}`)
-                .join("\n")}`
+              `Use /${command}_CHATID to toggle CHATID for group <i>${requestFor}</i>\n\n<b>Current chats in group</b>\n${
+                infos.length === 0 ? "  <i>No chats found...</i>" : infos.map(info => ` - ${info.parsed.infoString}`).join("\n")
+              }`
             )
           )
           .catch(e => this.sendError(e));
